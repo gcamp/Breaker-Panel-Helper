@@ -183,9 +183,12 @@ class CircuitListManager {
         const row = document.createElement('tr');
         
         // Breaker number with double pole indicator
-        const breakerNumberHtml = breaker.double_pole 
+        var breakerNumberHtml = breaker.double_pole 
             ? `${breaker.position}-${breaker.position + 2}<span class="double-pole-indicator">2P</span>`
             : breaker.position;
+        if (breaker.label) {
+            breakerNumberHtml += `<span class="breaker-label"> — ${breaker.label}</span>`;
+        }
         
         // Circuit type with colored pill
         const circuitTypeHtml = circuit.type 
@@ -198,24 +201,13 @@ class CircuitListManager {
         if (breaker.monitor) flags.push('<span class="flag-badge flag-monitor">MONITOR</span>');
         const flagsHtml = flags.length > 0 ? `<div class="flags-cell">${flags.join('')}</div>` : '';
         
-        // Linked panel
-        let linkedPanelHtml = '';
-        if (circuit.type === 'subpanel' && circuit.subpanel_id) {
-            const linkedPanel = this.app.allPanels.find(p => p.id === circuit.subpanel_id);
-            if (linkedPanel) {
-                linkedPanelHtml = `<a href="#" class="linked-panel-link" data-panel-id="${linkedPanel.id}">${linkedPanel.name}</a>`;
-            }
-        }
-        
         row.innerHTML = `
             <td class="breaker-number-cell">${breakerNumberHtml}</td>
-            <td>${breaker.label || '-'}</td>
             <td class="amperage-cell">${breaker.amperage ? breaker.amperage + 'A' : '-'}</td>
             <td>${circuit.room || '-'}</td>
             <td>${circuitTypeHtml}</td>
             <td>${circuit.notes || '-'}</td>
             <td>${flagsHtml}</td>
-            <td>${linkedPanelHtml}</td>
         `;
         
         return row;
@@ -277,18 +269,12 @@ class CircuitListManager {
         // Remove active classes from all headers
         document.querySelectorAll('.sortable').forEach(header => {
             header.classList.remove('active', 'asc', 'desc');
-            const indicator = header.querySelector('.sort-indicator');
-            if (indicator) indicator.textContent = '';
         });
         
         // Add active class to current sort column
         const activeHeader = document.querySelector(`[data-column="${this.app.currentSort.column}"]`);
         if (activeHeader) {
             activeHeader.classList.add('active', this.app.currentSort.direction);
-            const indicator = activeHeader.querySelector('.sort-indicator');
-            if (indicator) {
-                indicator.textContent = this.app.currentSort.direction === 'asc' ? '▲' : '▼';
-            }
         }
     }
 

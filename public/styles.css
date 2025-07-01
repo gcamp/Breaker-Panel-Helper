@@ -715,36 +715,6 @@ h1 {
     color: #ecf0f1;
 }
 
-/* Circuit Type Styling in Dropdown */
-.form-group select[name="type"] {
-    background-color: white;
-}
-
-.form-group select[name="type"] option[value="outlet"] {
-    background-color: rgba(52, 152, 219, 0.1);
-    color: #2c3e50;
-}
-
-.form-group select[name="type"] option[value="lighting"] {
-    background-color: rgba(243, 156, 18, 0.1);
-    color: #2c3e50;
-}
-
-.form-group select[name="type"] option[value="heating"] {
-    background-color: rgba(231, 76, 60, 0.1);
-    color: #2c3e50;
-}
-
-.form-group select[name="type"] option[value="appliance"] {
-    background-color: rgba(39, 174, 96, 0.1);
-    color: #2c3e50;
-}
-
-.form-group select[name="type"] option[value="subpanel"] {
-    background-color: rgba(139, 92, 246, 0.1);
-    color: #2c3e50;
-}
-
 .circuit-table td {
     padding: 10px 8px;
     border-bottom: 1px solid #ecf0f1;
