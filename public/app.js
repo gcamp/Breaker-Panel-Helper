@@ -46,8 +46,6 @@ class BreakerPanelApp {
         // Panel management
         this.bindElement('new-panel', 'click', () => this.openNewPanelModal());
         this.bindElement('delete-panel', 'click', () => this.deleteCurrentPanel());
-        this.bindElement('prev-panel', 'click', () => this.navigatePanel(-1));
-        this.bindElement('next-panel', 'click', () => this.navigatePanel(1));
         this.bindElement('current-panel', 'change', (e) => this.switchPanel(parseInt(e.target.value)));
         
         // New panel modal
@@ -268,22 +266,6 @@ class BreakerPanelApp {
             this.updatePanelControls();
             
             // Update circuit list if displayed
-            if (this.isCircuitListVisible()) {
-                this.loadCircuitList();
-            }
-        }
-    }
-
-    async navigatePanel(direction) {
-        const currentIndex = this.allPanels.findIndex(p => p.id === this.currentPanel.id);
-        const newIndex = currentIndex + direction;
-        
-        if (newIndex >= 0 && newIndex < this.allPanels.length) {
-            this.currentPanel = this.allPanels[newIndex];
-            this.renderPanel();
-            this.updatePanelControls();
-            await this.populatePanelSelector();
-            
             if (this.isCircuitListVisible()) {
                 this.loadCircuitList();
             }
