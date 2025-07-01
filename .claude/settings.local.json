@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(npm start)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(ls:*)",
+      "Bash(DB_PATH=test_breaker_panel.db npm start)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(DB_PATH=test_breaker_panel.db node server.js)"
+    ],
+    "deny": []
+  }
+}

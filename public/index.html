@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Comprehensive electrical panel breaker management system">
+    <title>Breaker Panel Helper</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Breaker Panel Helper</h1>
+        </header>
+        
+        <div class="controls">
+            <div class="panel-management">
+                <div class="panel-selector">
+                    <label for="current-panel">Current Panel:</label>
+                    <select id="current-panel">
+                        <!-- Panels will be populated here -->
+                    </select>
+                    <button id="prev-panel" title="Previous Panel">←</button>
+                    <button id="next-panel" title="Next Panel">→</button>
+                </div>
+                
+                <div class="panel-actions">
+                    <button id="new-panel">New Panel</button>
+                    <button id="delete-panel">Delete Panel</button>
+                </div>
+            </div>
+            
+            <div class="view-modes">
+                <label>View Mode:</label>
+                <button id="normal-mode" class="mode-btn active">Normal</button>
+                <button id="critical-mode" class="mode-btn">Critical</button>
+                <button id="monitor-mode" class="mode-btn">Monitor</button>
+            </div>
+            
+            <div class="display-modes">
+                <label>Display:</label>
+                <button id="panel-view" class="display-btn active">Panel View</button>
+                <button id="circuit-list" class="display-btn">Circuit List</button>
+            </div>
+        </div>
+
+        <div id="new-panel-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Create New Panel</h2>
+                <form id="new-panel-form">
+                    <div class="form-group">
+                        <label for="panel-name">Panel Name:</label>
+                        <input type="text" id="panel-name" name="name" placeholder="e.g., Main Panel, Garage Subpanel" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="panel-size">Panel Size:</label>
+                        <select id="panel-size" name="size">
+                            <option value="12">12 Spaces</option>
+                            <option value="20">20 Spaces</option>
+                            <option value="24">24 Spaces</option>
+                            <option value="30">30 Spaces</option>
+                            <option value="40" selected>40 Spaces</option>
+                            <option value="42">42 Spaces</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Create Panel</button>
+                        <button type="button" id="cancel-new-panel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel-container">
+            <div id="breaker-panel" class="breaker-panel">
+                <!-- Panel will be generated here -->
+            </div>
+        </div>
+
+        <div class="circuit-list-container" style="display: none;">
+            <div class="circuit-list-header">
+                <h2>Circuit List - <span id="circuit-list-panel-name"></span></h2>
+                <p>Total Circuits: <span id="total-circuits">0</span> | Filtered: <span id="filtered-circuits">0</span></p>
+            </div>
+            
+            <div class="circuit-filters">
+                <div class="filter-group">
+                    <label for="circuit-search">Search:</label>
+                    <input type="text" id="circuit-search" placeholder="Search circuits, rooms, notes..." />
+                </div>
+                
+                <div class="filter-group">
+                    <label for="room-filter">Room:</label>
+                    <select id="room-filter">
+                        <option value="">All Rooms</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="type-filter">Circuit Type:</label>
+                    <select id="type-filter">
+                        <option value="">All Types</option>
+                        <option value="outlet">Outlet</option>
+                        <option value="lighting">Lighting</option>
+                        <option value="heating">Heating</option>
+                        <option value="appliance">Appliance</option>
+                        <option value="subpanel">Subpanel</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group flags-filter">
+                    <label>Flags:</label>
+                    <div class="flag-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="critical-filter" value="critical">
+                            Critical
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="monitor-filter" value="monitor">
+                            Monitor
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <button id="clear-filters" type="button">Clear All</button>
+                </div>
+            </div>
+            <div class="circuit-table-wrapper">
+                <table id="circuit-table" class="circuit-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable active asc" data-column="breaker">Breaker # <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="label">Label <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="amperage">Amps <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="room">Room <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="type">Type <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="notes">Notes <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="flags">Flags <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="linked">SubPanel <span class="sort-indicator"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="circuit-table-body">
+                        <!-- Circuits will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="breaker-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Edit Breaker</h2>
+                <form id="breaker-form">
+                    <div class="form-group">
+                        <label for="breaker-label">Label:</label>
+                        <input type="text" id="breaker-label" name="label">
+                    </div>
+                    <div class="form-group">
+                        <label for="breaker-amperage">Amperage:</label>
+                        <select id="breaker-amperage" name="amperage">
+                            <option value="15">15A</option>
+                            <option value="20">20A</option>
+                            <option value="30">30A</option>
+                            <option value="40">40A</option>
+                            <option value="50">50A</option>
+                            <option value="60">60A</option>
+                            <option value="80">80A</option>
+                            <option value="100">100A</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="breaker-critical" name="critical">
+                            Critical Circuit
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="breaker-monitor" name="monitor">
+                            Should Monitor
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="breaker-double-pole" name="doublePole">
+                            Double Pole Breaker
+                        </label>
+                    </div>
+                    
+                    <h3>Circuits</h3>
+                    <div id="circuits-container">
+                        <!-- Circuits will be added here -->
+                    </div>
+                    <button type="button" id="add-circuit">Add Circuit</button>
+                    
+                    <div class="form-actions">
+                        <button type="submit">Save</button>
+                        <button type="button" id="cancel-edit">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script src="panel-renderer.js"></script>
+    <script src="circuit-list.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
