@@ -22,7 +22,10 @@
       "Bash(DB_PATH=panel_imported.db node validate-features.js)",
       "Bash(DB_PATH=panel_imported.db npm start)",
       "Bash(find:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(PORT=3001 npm start)",
+      "Bash(echo)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }
