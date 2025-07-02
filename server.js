@@ -305,6 +305,7 @@ app.post('/api/breakers', asyncHandler(async (req, res) => {
 app.put('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
     const { label, amperage, critical, monitor, confirmed, breaker_type, double_pole, tandem, slot_position } = req.body;
     
+    
     // Validation
     if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
         return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
@@ -339,16 +340,23 @@ app.put('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
         slot_position: finalSlotPosition
     };
 
-    const result = await dbRun(
-        `UPDATE breakers SET label = ?, amperage = ?, critical = ?, monitor = ?, confirmed = ?, breaker_type = ?, slot_position = ? WHERE id = ?`,
-        [breakerData.label, breakerData.amperage, breakerData.critical, breakerData.monitor, 
-         breakerData.confirmed, breakerData.breaker_type, breakerData.slot_position, req.params.id]
-    );
+    try {
+        const result = await dbRun(
+            `UPDATE breakers SET label = ?, amperage = ?, critical = ?, monitor = ?, confirmed = ?, breaker_type = ?, slot_position = ? WHERE id = ?`,
+            [breakerData.label, breakerData.amperage, breakerData.critical, breakerData.monitor, 
+             breakerData.confirmed, breakerData.breaker_type, breakerData.slot_position, req.params.id]
+        );
 
-    if (result.changes === 0) {
-        return res.status(404).json({ error: 'Breaker not found' });
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Breaker not found' });
+        }
+        res.json({ id: req.params.id, ...breakerData });
+    } catch (error) {
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: 'A breaker already exists at this position and slot' });
+        }
+        throw error;
     }
-    res.json({ id: req.params.id, ...breakerData });
 }));
 
 app.delete('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {

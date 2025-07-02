@@ -67,6 +67,7 @@ Breaker,Critical,Monitor,,,Pièce,Type,Description
 35-37,,📈,30,✅,Salle de bain Sous-sol,Appareil,Sécheuse
 36A,,,15,,Salle Familiale,Éclairage,Lumière escalier
 36A,,,15,,Salle Familiale,Éclairage,Lumiere encastré
+36A,,,15,,Salle Familiale,Éclairage,Garde manger escalier
 36A,,,15,,Salle Familiale,Éclairage,Lumière devant salle de bain
 36A,,,15,,Chambre Sous-sol,Éclairage,Luminaire
 36A,,,15,,Salle Familiale,Éclairage,Lumière rangement nord
@@ -83,8 +84,6 @@ Breaker,Critical,Monitor,,,Pièce,Type,Description
 42,🔋,,15,✅,Chambre des maitres,Prise,Toutes les prises
 42,🔋,,15,✅,Chambre enfants,Prise,Toutes les prises
 42,🔋,,15,✅,Couloir étage,Prise,Les 2 prises
-?,#N/A,,#N/A,,Salle Familiale,Éclairage,Garde manger escalier
-?,#N/A,,#N/A,,Cuisine,Prise,Prise Sud (fenêtre)
 ,,,,,,,
 ,,,,,,,
 ,,,,,,,

@@ -177,11 +177,18 @@ class PanelRenderer {
     updateBreakerFlags(breakerElement, breaker) {
         const container = breakerElement.closest('.breaker-container');
         
-        // Update classes for styling
-        container.classList.toggle('critical', breaker.critical);
-        container.classList.toggle('monitor', breaker.monitor);
-        container.classList.toggle('confirmed', breaker.confirmed);
+        // For tandem breakers, only apply flags to individual breaker elements
+        // For single breakers, apply to both container and element for backward compatibility
+        const isTandem = container.classList.contains('has-tandem');
         
+        if (!isTandem) {
+            // Single breaker - apply to container for CSS targeting
+            container.classList.toggle('critical', breaker.critical);
+            container.classList.toggle('monitor', breaker.monitor);
+            container.classList.toggle('confirmed', breaker.confirmed);
+        }
+        
+        // Always apply to individual breaker element
         breakerElement.classList.toggle('critical', breaker.critical);
         breakerElement.classList.toggle('monitor', breaker.monitor);
         breakerElement.classList.toggle('confirmed', breaker.confirmed);
@@ -815,7 +822,8 @@ class PanelRenderer {
             const formData = new FormData(e.target);
             
             const amperage = formData.get('amperage');
-            const breakerType = formData.get('breakerType') || 'single';
+            // Use current breaker type if form field is disabled (for tandem B-slots)
+            const breakerType = formData.get('breakerType') || this.app.currentBreaker.breaker_type || 'single';
             const isTandem = breakerType === 'tandem';
             const breakerData = {
                 label: formData.get('label'),
@@ -824,7 +832,7 @@ class PanelRenderer {
                 monitor: formData.get('monitor') === 'on',
                 confirmed: formData.get('confirmed') === 'on',
                 breaker_type: breakerType,
-                slot_position: isTandem ? 'A' : 'single'
+                slot_position: isTandem ? (this.app.currentBreaker.slot_position || 'A') : 'single'
             };
 
             if (this.app.currentBreaker.id) {

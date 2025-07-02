@@ -437,7 +437,9 @@ h1 {
     color: var(--subpanel-color);
 }
 
-.panel-container.critical-mode .breaker-container.critical .breaker {
+/* Critical mode styling - support both container-level (single breakers) and element-level (tandem breakers) */
+.panel-container.critical-mode .breaker-container.critical .breaker,
+.panel-container.critical-mode .breaker.critical {
     color: var(--critical-text) !important;
     font-weight: 700 !important;
     background-color: var(--critical-bg);
@@ -445,7 +447,9 @@ h1 {
     border-radius: 3px;
 }
 
-.panel-container.monitor-mode .breaker-container.monitor .breaker {
+/* Monitor mode styling - support both container-level (single breakers) and element-level (tandem breakers) */
+.panel-container.monitor-mode .breaker-container.monitor .breaker,
+.panel-container.monitor-mode .breaker.monitor {
     color: var(--monitor-text) !important;
     font-weight: 700 !important;
     background-color: var(--monitor-bg);
@@ -453,12 +457,16 @@ h1 {
     border-radius: 3px;
 }
 
-.panel-container.critical-mode .breaker-container.critical .breaker .breaker-number {
+/* Critical mode number styling */
+.panel-container.critical-mode .breaker-container.critical .breaker .breaker-number,
+.panel-container.critical-mode .breaker.critical .breaker-number {
     background-color: var(--critical-number-bg) !important;
     color: white !important;
 }
 
-.panel-container.monitor-mode .breaker-container.monitor .breaker .breaker-number {
+/* Monitor mode number styling */
+.panel-container.monitor-mode .breaker-container.monitor .breaker .breaker-number,
+.panel-container.monitor-mode .breaker.monitor .breaker-number {
     background-color: var(--monitor-number-bg) !important;
     color: white !important;
 }
