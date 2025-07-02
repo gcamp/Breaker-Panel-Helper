@@ -75,10 +75,9 @@
     --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
 }
 
-/* Dark Mode Theme - System Preference */
+/* Dark Mode Theme */
 @media (prefers-color-scheme: dark) {
     :root {
-        /* Dark Mode Colors */
         --bg-primary: #1a1a1a;
         --bg-secondary: #2d2d2d;
         --bg-tertiary: #1e1e1e;
@@ -92,28 +91,17 @@
         --input-border: #404040;
         --modal-bg: #2d2d2d;
         --modal-overlay: rgba(0, 0, 0, 0.7);
-        
-        /* Adjust colors for better contrast in dark mode */
         --primary-color: #5dade2;
         --success-color: #58d68d;
         --warning-color: #f7dc6f;
         --danger-color: #ec7063;
         --info-color: #af7ac5;
-        
-        /* View Mode Colors - Dark Mode */
         --critical-bg: #4a1c1c;
         --critical-text: #ff6b6b;
-        --critical-number-bg: #d63031;
         --monitor-bg: #2d1b47;
         --monitor-text: #b19cd9;
-        --monitor-number-bg: #6c5ce7;
-        
-        /* Table Row Colors - Dark Mode */
         --table-row-even: #262626;
-        --table-row-even-hover: #606060;
-        --table-row-highlight: #606060;
         --table-row-hover-bg: #606060;
-        --table-row-hover-text: #ffffff;
     }
 }
 
@@ -1273,6 +1261,23 @@ h1 {
         max-width: 100px;
     }
     
+    /* Tandem Breaker Mobile Styles */
+    .tandem-breakers .breaker {
+        font-size: 10px;
+        padding: 1px 3px;
+        gap: 3px;
+    }
+    
+    .tandem-breakers .breaker-number {
+        font-size: 9px;
+        padding: 1px 2px;
+        min-width: 16px;
+    }
+    
+    .tandem-breakers .breaker-label {
+        font-size: 8px;
+    }
+    
     /* Circuit List Mobile Optimization */
     .circuit-list-container {
         padding: var(--spacing-md);
@@ -1441,6 +1446,23 @@ h1 {
     .breaker.has-subpanel .breaker-label {
         font-size: 9px;
         max-width: 80px;
+    }
+    
+    /* Tandem Breaker Extra Small Mobile Styles */
+    .tandem-breakers .breaker {
+        font-size: 9px;
+        padding: 1px 2px;
+        gap: 2px;
+    }
+    
+    .tandem-breakers .breaker-number {
+        font-size: 8px;
+        padding: 1px;
+        min-width: 14px;
+    }
+    
+    .tandem-breakers .breaker-label {
+        font-size: 7px;
     }
     
     /* Button optimizations */
@@ -1661,38 +1683,3 @@ h1 {
     display: flex;
 }
 
-@media (max-width: 768px) {
-    .tandem-breakers .breaker {
-        font-size: 10px;
-        padding: 1px 3px;
-        gap: 3px;
-    }
-    
-    .tandem-breakers .breaker-number {
-        font-size: 9px;
-        padding: 1px 2px;
-        min-width: 16px;
-    }
-    
-    .tandem-breakers .breaker-label {
-        font-size: 8px;
-    }
-}
-
-@media (max-width: 480px) {
-    .tandem-breakers .breaker {
-        font-size: 9px;
-        padding: 1px 2px;
-        gap: 2px;
-    }
-    
-    .tandem-breakers .breaker-number {
-        font-size: 8px;
-        padding: 1px;
-        min-width: 14px;
-    }
-    
-    .tandem-breakers .breaker-label {
-        font-size: 7px;
-    }
-}

@@ -20,7 +20,8 @@
       "Bash(DB_PATH=test_breaker_panel.db node validate-features.js)",
       "Bash(sqlite3:*)",
       "Bash(DB_PATH=panel_imported.db node validate-features.js)",
-      "Bash(DB_PATH=panel_imported.db npm start)"
+      "Bash(DB_PATH=panel_imported.db npm start)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

@@ -27,20 +27,20 @@ This is a full-stack electrical panel management application with:
 ### Core Components
 
 #### Server-Side (`server.js`)
-- Express.js REST API with comprehensive CRUD endpoints
-- SQLite database with automatic schema migrations
-- Validation middleware with parameter-specific ID checking
+- Express.js REST API with streamlined CRUD endpoints
+- SQLite database with simplified schema (legacy columns removed)
+- Consolidated validation middleware for all endpoints
 - Graceful error handling and database connection management
 
 #### Client-Side Architecture
 - **Main App** (`app.js`): `BreakerPanelApp` - Central coordinator and event management
 - **Panel Renderer** (`panel-renderer.js`): `PanelRenderer` - Visual panel layout, breaker display, modal management
 - **Circuit List** (`circuit-list.js`): `CircuitListManager` - Tabular view, filtering, sorting
-- **API Client** (`api-client.js`): `ApiClient` - All server communication with client-side validation
+- **API Client** (`api-client.js`): `ApiClient` - Server communication with minimal client-side validation
 
 ### Database Schema
 - **panels**: Panel configuration (name, size 12-42 spaces)
-- **breakers**: Individual breaker settings (position, amperage, flags, double_pole)
+- **breakers**: Individual breaker settings (position, amperage, flags, breaker_type)
 - **circuits**: Circuit details (room, type, notes, subpanel_id for hierarchical linking)
 
 ### Key Features

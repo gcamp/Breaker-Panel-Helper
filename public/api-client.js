@@ -264,29 +264,16 @@ class ApiClient {
         return Number.isInteger(numPos) && numPos > 0;
     }
 
+    // Basic client-side validation - server handles comprehensive validation
     validatePanelData(data) {
-        if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
-            throw new Error('Panel name is required and must be a non-empty string');
-        }
-        if (!data.size || typeof data.size !== 'number' || data.size < 12 || data.size > 42) {
-            throw new Error('Panel size must be a number between 12 and 42');
-        }
+        if (!data.name?.trim()) throw new Error('Panel name is required');
+        if (!data.size) throw new Error('Panel size is required');
     }
 
     validateBreakerData(data, requireAll = true) {
         if (requireAll) {
-            if (!this.isValidId(data.panel_id)) {
-                throw new Error('Valid panel ID is required');
-            }
-            if (!this.isValidPosition(data.position)) {
-                throw new Error('Valid position is required');
-            }
-        }
-        
-        if (data.amperage !== undefined && data.amperage !== null && data.amperage !== '') {
-            if (typeof data.amperage !== 'number' || data.amperage <= 0 || data.amperage > 200) {
-                throw new Error('Amperage must be between 1 and 200');
-            }
+            if (!this.isValidId(data.panel_id)) throw new Error('Valid panel ID is required');
+            if (!this.isValidPosition(data.position)) throw new Error('Valid position is required');
         }
     }
 
@@ -294,29 +281,10 @@ class ApiClient {
         if (requireAll && !this.isValidId(data.breaker_id)) {
             throw new Error('Valid breaker ID is required');
         }
-        
-        const validTypes = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
-        if (data.type && !validTypes.includes(data.type)) {
-            throw new Error(`Circuit type must be one of: ${validTypes.join(', ')}`);
-        }
-        
-        if (data.subpanel_id !== undefined && data.subpanel_id !== null && !this.isValidId(data.subpanel_id)) {
-            throw new Error('Subpanel ID must be a valid positive number');
-        }
-        
-        if (data.room_id !== undefined && data.room_id !== null && data.room_id !== '' && !this.isValidId(data.room_id)) {
-            throw new Error('Room ID must be a valid positive number');
-        }
     }
 
     validateRoomData(data) {
-        if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
-            throw new Error('Room name is required and must be a non-empty string');
-        }
-        
-        const validLevels = ['basement', 'main', 'upper', 'outside'];
-        if (!data.level || !validLevels.includes(data.level)) {
-            throw new Error(`Level must be one of: ${validLevels.join(', ')}`);
-        }
+        if (!data.name?.trim()) throw new Error('Room name is required');
+        if (!data.level) throw new Error('Room level is required');
     }
 }

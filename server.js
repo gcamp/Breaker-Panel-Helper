@@ -36,8 +36,6 @@ const initializeDatabase = () => {
             monitor BOOLEAN DEFAULT 0,
             confirmed BOOLEAN DEFAULT 0,
             breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
-            tandem BOOLEAN DEFAULT 0,
-            double_pole BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
             UNIQUE(panel_id, position, slot_position)
@@ -63,46 +61,15 @@ const initializeDatabase = () => {
             FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
         )`);
 
-        // Migration: Add breaker_type column and migrate existing data
-        db.run(`PRAGMA table_info(breakers)`, (err, rows) => {
-            if (err) {
-                console.error('Error checking table schema:', err);
-                return;
-            }
-        });
-
-        // Check if breaker_type column exists and add if missing
+        // Clean up legacy columns if they exist
         db.all(`PRAGMA table_info(breakers)`, (err, columns) => {
-            if (err) {
-                console.error('Error checking breaker table schema:', err);
-                return;
-            }
+            if (err) return;
             
-            const hasBreakerkType = columns.some(col => col.name === 'breaker_type');
-            
-            if (!hasBreakerkType) {
-                console.log('Adding breaker_type column...');
-                db.run(`ALTER TABLE breakers ADD COLUMN breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem'))`, (err) => {
-                    if (err) {
-                        console.error('Error adding breaker_type column:', err);
-                        return;
-                    }
-                    
-                    // Migrate existing data
-                    console.log('Migrating existing breaker data...');
-                    db.run(`UPDATE breakers SET breaker_type = 
-                        CASE 
-                            WHEN double_pole = 1 THEN 'double_pole'
-                            WHEN tandem = 1 THEN 'tandem'
-                            ELSE 'single'
-                        END`, (err) => {
-                        if (err) {
-                            console.error('Error migrating breaker data:', err);
-                        } else {
-                            console.log('Breaker data migration completed');
-                        }
-                    });
-                });
+            const hasLegacyColumns = columns.some(col => col.name === 'double_pole' || col.name === 'tandem');
+            if (hasLegacyColumns) {
+                console.log('Removing legacy breaker columns...');
+                db.run(`ALTER TABLE breakers DROP COLUMN IF EXISTS double_pole`);
+                db.run(`ALTER TABLE breakers DROP COLUMN IF EXISTS tandem`);
             }
         });
 
@@ -151,6 +118,73 @@ const validateId = (paramName = 'id') => (req, res, next) => {
     next();
 };
 
+// Validation middleware
+const validatePanelData = (req, res, next) => {
+    const { name, size } = req.body;
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Name is required and must be a non-empty string' });
+    }
+    if (!size || typeof size !== 'number' || size < 12 || size > 42) {
+        return res.status(400).json({ error: 'Size must be a number between 12 and 42' });
+    }
+    next();
+};
+
+const validateBreakerData = (req, res, next) => {
+    const { panel_id, position, amperage, slot_position, breaker_type } = req.body;
+    
+    if (req.method === 'POST') {
+        if (!panel_id || typeof panel_id !== 'number' || panel_id <= 0) {
+            return res.status(400).json({ error: 'Valid panel ID is required' });
+        }
+        if (!position || typeof position !== 'number' || position <= 0) {
+            return res.status(400).json({ error: 'Valid position is required' });
+        }
+    }
+    
+    if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
+        return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
+    }
+    if (slot_position && !['single', 'A', 'B'].includes(slot_position)) {
+        return res.status(400).json({ error: 'Slot position must be one of: single, A, B' });
+    }
+    if (breaker_type && !['single', 'double_pole', 'tandem'].includes(breaker_type)) {
+        return res.status(400).json({ error: 'Breaker type must be one of: single, double_pole, tandem' });
+    }
+    next();
+};
+
+const validateRoomData = (req, res, next) => {
+    const { name, level } = req.body;
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Room name is required and must be a non-empty string' });
+    }
+    if (!level || !['basement', 'main', 'upper', 'outside'].includes(level)) {
+        return res.status(400).json({ error: 'Level must be one of: basement, main, upper, outside' });
+    }
+    next();
+};
+
+const validateCircuitData = (req, res, next) => {
+    const { breaker_id, type, room_id, subpanel_id } = req.body;
+    
+    if (req.method === 'POST' && (!breaker_id || typeof breaker_id !== 'number' || breaker_id <= 0)) {
+        return res.status(400).json({ error: 'Valid breaker ID is required' });
+    }
+    
+    const validTypes = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
+    if (type && !validTypes.includes(type)) {
+        return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` });
+    }
+    if (room_id && (typeof room_id !== 'number' || room_id <= 0)) {
+        return res.status(400).json({ error: 'Room ID must be a valid positive number' });
+    }
+    if (subpanel_id && (typeof subpanel_id !== 'number' || subpanel_id <= 0)) {
+        return res.status(400).json({ error: 'Subpanel ID must be a valid positive number' });
+    }
+    next();
+};
+
 // Panel routes
 app.get('/api/panels', asyncHandler(async (req, res) => {
     const panels = await dbAll('SELECT * FROM panels ORDER BY created_at DESC');
@@ -165,32 +199,14 @@ app.get('/api/panels/:id', validateId(), asyncHandler(async (req, res) => {
     res.json(panel);
 }));
 
-app.post('/api/panels', asyncHandler(async (req, res) => {
+app.post('/api/panels', validatePanelData, asyncHandler(async (req, res) => {
     const { name, size } = req.body;
-    
-    // Validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Name is required and must be a non-empty string' });
-    }
-    if (!size || typeof size !== 'number' || size < 12 || size > 42) {
-        return res.status(400).json({ error: 'Size must be a number between 12 and 42' });
-    }
-
     const result = await dbRun('INSERT INTO panels (name, size) VALUES (?, ?)', [name.trim(), size]);
     res.status(201).json({ id: result.id, name: name.trim(), size });
 }));
 
-app.put('/api/panels/:id', validateId(), asyncHandler(async (req, res) => {
+app.put('/api/panels/:id', validateId(), validatePanelData, asyncHandler(async (req, res) => {
     const { name, size } = req.body;
-    
-    // Validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Name is required and must be a non-empty string' });
-    }
-    if (!size || typeof size !== 'number' || size < 12 || size > 42) {
-        return res.status(400).json({ error: 'Size must be a number between 12 and 42' });
-    }
-
     const result = await dbRun('UPDATE panels SET name = ?, size = ? WHERE id = ?', [name.trim(), size, req.params.id]);
     if (result.changes === 0) {
         return res.status(404).json({ error: 'Panel not found' });
@@ -239,37 +255,14 @@ app.get('/api/panels/:panelId/breakers/position/:position', asyncHandler(async (
     }
 }));
 
-app.post('/api/breakers', asyncHandler(async (req, res) => {
-    const { panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, double_pole, tandem, slot_position } = req.body;
+app.post('/api/breakers', validateBreakerData, asyncHandler(async (req, res) => {
+    const { panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, slot_position } = req.body;
     
-    // Validation
-    if (!panel_id || typeof panel_id !== 'number' || panel_id <= 0) {
-        return res.status(400).json({ error: 'Valid panel ID is required' });
-    }
-    if (!position || typeof position !== 'number' || position <= 0) {
-        return res.status(400).json({ error: 'Valid position is required' });
-    }
-    if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
-        return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
-    }
-    if (slot_position && !['single', 'A', 'B'].includes(slot_position)) {
-        return res.status(400).json({ error: 'Slot position must be one of: single, A, B' });
-    }
-    if (breaker_type && !['single', 'double_pole', 'tandem'].includes(breaker_type)) {
-        return res.status(400).json({ error: 'Breaker type must be one of: single, double_pole, tandem' });
-    }
-
-    // Determine breaker type from input (support both new and legacy formats)
-    let finalBreakerType = breaker_type || 'single';
-    if (!breaker_type) {
-        if (double_pole) finalBreakerType = 'double_pole';
-        else if (tandem) finalBreakerType = 'tandem';
-    }
-
     // For tandem breakers, ensure slot_position is set appropriately
     let finalSlotPosition = slot_position || 'single';
+    let finalBreakerType = breaker_type || 'single';
     if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
-        finalSlotPosition = 'A'; // Default to A for tandem breakers
+        finalSlotPosition = 'A';
     }
 
     const breakerData = {
@@ -302,30 +295,12 @@ app.post('/api/breakers', asyncHandler(async (req, res) => {
     }
 }));
 
-app.put('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
-    const { label, amperage, critical, monitor, confirmed, breaker_type, double_pole, tandem, slot_position } = req.body;
-    
-    
-    // Validation
-    if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
-        return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
-    }
-    if (slot_position && !['single', 'A', 'B'].includes(slot_position)) {
-        return res.status(400).json({ error: 'Slot position must be one of: single, A, B' });
-    }
-    if (breaker_type && !['single', 'double_pole', 'tandem'].includes(breaker_type)) {
-        return res.status(400).json({ error: 'Breaker type must be one of: single, double_pole, tandem' });
-    }
-
-    // Determine breaker type from input (support both new and legacy formats)
-    let finalBreakerType = breaker_type || 'single';
-    if (!breaker_type) {
-        if (double_pole) finalBreakerType = 'double_pole';
-        else if (tandem) finalBreakerType = 'tandem';
-    }
+app.put('/api/breakers/:id', validateId(), validateBreakerData, asyncHandler(async (req, res) => {
+    const { label, amperage, critical, monitor, confirmed, breaker_type, slot_position } = req.body;
 
     // For tandem breakers, ensure slot_position is set appropriately
     let finalSlotPosition = slot_position || 'single';
+    let finalBreakerType = breaker_type || 'single';
     if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
         finalSlotPosition = 'A'; // Default to A for tandem breakers
     }
@@ -383,17 +358,8 @@ app.get('/api/rooms', asyncHandler(async (req, res) => {
     res.json(rooms);
 }));
 
-app.post('/api/rooms', asyncHandler(async (req, res) => {
+app.post('/api/rooms', validateRoomData, asyncHandler(async (req, res) => {
     const { name, level } = req.body;
-    
-    // Validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Room name is required and must be a non-empty string' });
-    }
-    if (!level || !['basement', 'main', 'upper', 'outside'].includes(level)) {
-        return res.status(400).json({ error: 'Level must be one of: basement, main, upper, outside' });
-    }
-
     try {
         const result = await dbRun('INSERT INTO rooms (name, level) VALUES (?, ?)', [name.trim(), level]);
         res.status(201).json({ id: result.id, name: name.trim(), level });
@@ -405,17 +371,8 @@ app.post('/api/rooms', asyncHandler(async (req, res) => {
     }
 }));
 
-app.put('/api/rooms/:id', validateId(), asyncHandler(async (req, res) => {
+app.put('/api/rooms/:id', validateId(), validateRoomData, asyncHandler(async (req, res) => {
     const { name, level } = req.body;
-    
-    // Validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Room name is required and must be a non-empty string' });
-    }
-    if (!level || !['basement', 'main', 'upper', 'outside'].includes(level)) {
-        return res.status(400).json({ error: 'Level must be one of: basement, main, upper, outside' });
-    }
-
     try {
         const result = await dbRun('UPDATE rooms SET name = ?, level = ? WHERE id = ?', [name.trim(), level, req.params.id]);
         if (result.changes === 0) {
@@ -460,26 +417,8 @@ app.get('/api/breakers/:breakerId/circuits', validateId('breakerId'), asyncHandl
     res.json(circuits);
 }));
 
-app.post('/api/circuits', asyncHandler(async (req, res) => {
+app.post('/api/circuits', validateCircuitData, asyncHandler(async (req, res) => {
     const { breaker_id, room_id, type, notes, subpanel_id } = req.body;
-    
-    // Validation
-    if (!breaker_id || typeof breaker_id !== 'number' || breaker_id <= 0) {
-        return res.status(400).json({ error: 'Valid breaker ID is required' });
-    }
-    
-    const validTypes = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
-    if (type && !validTypes.includes(type)) {
-        return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` });
-    }
-
-    if (room_id && (typeof room_id !== 'number' || room_id <= 0)) {
-        return res.status(400).json({ error: 'Room ID must be a valid positive number' });
-    }
-
-    if (subpanel_id && (typeof subpanel_id !== 'number' || subpanel_id <= 0)) {
-        return res.status(400).json({ error: 'Subpanel ID must be a valid positive number' });
-    }
 
     const circuitData = {
         breaker_id,
@@ -497,22 +436,8 @@ app.post('/api/circuits', asyncHandler(async (req, res) => {
     res.status(201).json({ id: result.id, ...circuitData });
 }));
 
-app.put('/api/circuits/:id', validateId(), asyncHandler(async (req, res) => {
+app.put('/api/circuits/:id', validateId(), validateCircuitData, asyncHandler(async (req, res) => {
     const { room_id, type, notes, subpanel_id } = req.body;
-    
-    // Validation
-    const validTypes = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
-    if (type && !validTypes.includes(type)) {
-        return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` });
-    }
-
-    if (room_id && (typeof room_id !== 'number' || room_id <= 0)) {
-        return res.status(400).json({ error: 'Room ID must be a valid positive number' });
-    }
-
-    if (subpanel_id && (typeof subpanel_id !== 'number' || subpanel_id <= 0)) {
-        return res.status(400).json({ error: 'Subpanel ID must be a valid positive number' });
-    }
 
     const circuitData = {
         room_id: room_id || null,
