@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Breaker-Panel-Helper</Name>
+  <Repository>ghcr.io/your-username/breaker-panel-helper:latest</Repository>
+  <Registry/>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/your-username/breaker-panel-helper</Support>
+  <Project>https://github.com/your-username/breaker-panel-helper</Project>
+  <Overview>Comprehensive electrical panel breaker management system with French localization and advanced circuit tracking.</Overview>
+  <Category>Tools: Utilities</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/selfhosters/unRAID-CA-templates/master/templates/img/database.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Description>
+    Breaker Panel Helper is a comprehensive electrical panel management application that allows you to:
+    &#xD;
+    - Track and manage electrical breakers across multiple panels
+    - Support for single, double-pole, and tandem breakers
+    - Circuit management with room assignments and detailed notes
+    - Critical breaker planning and move operations
+    - French/English localization
+    - Visual panel layout with drag-and-drop room management
+    - Export and print functionality
+    &#xD;
+    Perfect for electricians, homeowners, and facilities managers.
+  </Description>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>3000</HostPort>
+        <ContainerPort>3000</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/breaker-panel-helper/data</HostDir>
+      <ContainerDir>/app/data</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/appdata/breaker-panel-helper/csv-imports</HostDir>
+      <ContainerDir>/app/csv-imports</ContainerDir>
+      <Mode>ro</Mode>
+    </Volume>
+  </Data>
+  <Environment>
+    <Variable>
+      <Value>production</Value>
+      <Name>NODE_ENV</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>/app/data/breaker_panel.db</Value>
+      <Name>DB_PATH</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>3000</Value>
+      <Name>PORT</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>America/New_York</Value>
+      <Name>TZ</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Labels/>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port for web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Database Storage" Target="/app/data" Default="/mnt/user/appdata/breaker-panel-helper/data" Mode="rw" Description="Persistent storage for SQLite database" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/breaker-panel-helper/data</Config>
+  <Config Name="CSV Imports" Target="/app/csv-imports" Default="/mnt/user/appdata/breaker-panel-helper/csv-imports" Mode="ro" Description="Optional directory for CSV import files" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/breaker-panel-helper/csv-imports</Config>
+  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Container timezone" Type="Variable" Display="always" Required="false" Mask="false">America/New_York</Config>
+</Container>

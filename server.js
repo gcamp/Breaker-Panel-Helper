@@ -60,19 +60,6 @@ const initializeDatabase = () => {
             FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
             FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
         )`);
-
-        // Clean up legacy columns if they exist
-        db.all(`PRAGMA table_info(breakers)`, (err, columns) => {
-            if (err) return;
-            
-            const hasLegacyColumns = columns.some(col => col.name === 'double_pole' || col.name === 'tandem');
-            if (hasLegacyColumns) {
-                console.log('Removing legacy breaker columns...');
-                db.run(`ALTER TABLE breakers DROP COLUMN IF EXISTS double_pole`);
-                db.run(`ALTER TABLE breakers DROP COLUMN IF EXISTS tandem`);
-            }
-        });
-
     });
 };
 

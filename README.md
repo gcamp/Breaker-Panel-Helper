@@ -1,5 +1,9 @@
 # Breaker Panel Helper
 
+[![CI/CD Pipeline](https://github.com/your-username/breaker-panel-helper/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/your-username/breaker-panel-helper/actions)
+[![Docker Image](https://ghcr-badge.egpl.dev/your-username/breaker-panel-helper/latest_by_date)](https://github.com/your-username/breaker-panel-helper/pkgs/container/breaker-panel-helper)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A comprehensive web application for managing electrical panel breakers with advanced features including tandem breaker support, room management, and circuit tracking.
 
 ## Features
@@ -17,11 +21,40 @@ A comprehensive web application for managing electrical panel breakers with adva
 - **Mobile Responsive**: Works on desktop, tablet, and mobile devices
 - **Data Validation**: Comprehensive input validation and error handling
 
-## Installation
+## Quick Start with Docker
+
+### Using GitHub Container Registry (Recommended)
+
+```bash
+# Pull and run the latest image
+docker run -d \
+  --name breaker-panel-helper \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v ./data:/app/data \
+  ghcr.io/your-username/breaker-panel-helper:latest
+```
+
+### Using Docker Compose
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/breaker-panel-helper.git
+cd breaker-panel-helper
+
+# Start with docker-compose
+docker-compose up -d
+```
+
+### Unraid Installation
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete Unraid setup instructions.
+
+## Development Installation
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/your-username/breaker-panel-helper.git
    cd breaker-panel-helper
    ```
 
@@ -30,9 +63,9 @@ A comprehensive web application for managing electrical panel breakers with adva
    npm install
    ```
 
-3. **Start the server**:
+3. **Start the development server**:
    ```bash
-   npm start
+   npm run dev
    ```
 
 4. **Access the application**:

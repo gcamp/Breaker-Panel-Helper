@@ -1,0 +1,45 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log*
+
+# Development files
+tests/
+*.test.js
+test-data.js
+validate-features.js
+plan-critical-move.js
+import-csv.js
+
+# Local databases (use mounted volume)
+*.db
+*.db-*
+
+# Development and build files
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary files
+.tmp/
+temp/

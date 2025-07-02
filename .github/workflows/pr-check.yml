@@ -1,0 +1,250 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      docker: ${{ steps.changes.outputs.docker }}
+      tests: ${{ steps.changes.outputs.tests }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Detect changes
+      uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          backend:
+            - 'server.js'
+            - 'package*.json'
+          frontend:
+            - 'public/**'
+          docker:
+            - 'Dockerfile'
+            - '.dockerignore'
+            - 'docker-compose.yml'
+          tests:
+            - 'tests/**'
+            - '*.test.js'
+            - 'validate-features.js'
+
+  test-backend:
+    name: Test Backend Changes
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Test server startup
+      run: |
+        timeout 10s npm start &
+        sleep 5
+        curl -f http://localhost:3000 || exit 1
+
+    - name: Run backend tests
+      run: npm test -- --grep "server|api|backend" --if-present
+
+  test-frontend:
+    name: Test Frontend Changes
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Validate frontend files
+      run: |
+        # Check for syntax errors in JavaScript files
+        find public -name "*.js" -exec node -c {} \;
+        
+        # Check for missing dependencies
+        grep -r "require\|import" public/ || true
+
+    - name: Run frontend tests
+      run: npm test -- --grep "frontend|ui|client" --if-present
+
+  test-docker:
+    name: Test Docker Changes
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.docker == 'true' }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        tags: breaker-panel-helper:pr-test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image
+      run: |
+        # Start container
+        docker run --rm -d --name pr-test \
+          -p 3000:3000 \
+          -e NODE_ENV=production \
+          breaker-panel-helper:pr-test
+        
+        # Wait for startup
+        sleep 10
+        
+        # Test health
+        curl -f http://localhost:3000 || exit 1
+        
+        # Check logs for errors
+        if docker logs pr-test 2>&1 | grep -i error; then
+          echo "Found errors in container logs"
+          exit 1
+        fi
+        
+        # Cleanup
+        docker stop pr-test
+
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run ESLint
+      run: |
+        # Run linter if script exists
+        npm run lint --if-present || echo "No lint script found"
+
+    - name: Check Prettier formatting
+      run: |
+        # Check if prettier is configured
+        if [ -f ".prettierrc" ] || [ -f "prettier.config.js" ]; then
+          npx prettier --check . || echo "Prettier not configured properly"
+        fi
+
+    - name: Check code style
+      run: |
+        # Basic code style checks
+        echo "Checking for common issues..."
+        
+        # Check for console.log statements (warning only)
+        if grep -r "console\.log" --include="*.js" .; then
+          echo "⚠️  Found console.log statements - consider removing for production"
+        fi
+        
+        # Check for TODO/FIXME comments
+        if grep -r "TODO\|FIXME" --include="*.js" .; then
+          echo "📝 Found TODO/FIXME comments"
+        fi
+
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run npm audit
+      run: |
+        # Check for high severity vulnerabilities
+        npm audit --audit-level=high || {
+          echo "⚠️  High severity vulnerabilities found"
+          npm audit --audit-level=high --json > audit-results.json || true
+          cat audit-results.json
+        }
+
+    - name: Check for secrets
+      run: |
+        # Basic secret detection
+        echo "Checking for potential secrets..."
+        
+        # Check for common secret patterns
+        if grep -r -i "password\|secret\|key\|token" --include="*.js" --include="*.json" . | grep -v "node_modules"; then
+          echo "⚠️  Found potential secrets - please review"
+        fi
+
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [changes, test-backend, test-frontend, test-docker, lint-and-format, security-check]
+    if: always()
+
+    steps:
+    - name: Generate PR summary
+      run: |
+        echo "## PR Check Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Changes detected
+        echo "### Changes Detected" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend: ${{ needs.changes.outputs.backend }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend: ${{ needs.changes.outputs.frontend }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Docker: ${{ needs.changes.outputs.docker }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Tests: ${{ needs.changes.outputs.tests }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Test results
+        echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend Tests: ${{ needs.test-backend.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend Tests: ${{ needs.test-frontend.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Docker Tests: ${{ needs.test-docker.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Lint/Format: ${{ needs.lint-and-format.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Security Check: ${{ needs.security-check.result }}" >> $GITHUB_STEP_SUMMARY
