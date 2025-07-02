@@ -532,6 +532,97 @@ app.delete('/api/circuits/:id', validateId(), asyncHandler(async (req, res) => {
     res.json({ message: 'Circuit deleted successfully' });
 }));
 
+// Move circuit to different breaker/panel
+app.put('/api/circuits/:id/move', validateId(), asyncHandler(async (req, res) => {
+    const { target_panel_id, target_position, target_slot_position } = req.body;
+    
+    // Validation
+    if (!target_panel_id || typeof target_panel_id !== 'number' || target_panel_id <= 0) {
+        return res.status(400).json({ error: 'Valid target panel ID is required' });
+    }
+    
+    if (!target_position || typeof target_position !== 'number' || target_position <= 0) {
+        return res.status(400).json({ error: 'Valid target position is required' });
+    }
+    
+    const validSlotPositions = ['single', 'A', 'B'];
+    const slotPosition = target_slot_position || 'single';
+    if (!validSlotPositions.includes(slotPosition)) {
+        return res.status(400).json({ error: `Slot position must be one of: ${validSlotPositions.join(', ')}` });
+    }
+    
+    // Check if circuit exists
+    const circuit = await dbGet('SELECT * FROM circuits WHERE id = ?', [req.params.id]);
+    if (!circuit) {
+        return res.status(404).json({ error: 'Circuit not found' });
+    }
+    
+    // Check if target panel exists
+    const targetPanel = await dbGet('SELECT * FROM panels WHERE id = ?', [target_panel_id]);
+    if (!targetPanel) {
+        return res.status(400).json({ error: 'Target panel not found' });
+    }
+    
+    // Check if target position is within panel bounds
+    if (target_position > targetPanel.size) {
+        return res.status(400).json({ error: `Position ${target_position} exceeds panel size of ${targetPanel.size}` });
+    }
+    
+    // Check if target breaker exists, create if not
+    let targetBreaker = await dbGet(
+        'SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?',
+        [target_panel_id, target_position, slotPosition]
+    );
+    
+    if (!targetBreaker) {
+        // Create new breaker at target position
+        const result = await dbRun(
+            `INSERT INTO breakers (panel_id, position, slot_position, breaker_type) VALUES (?, ?, ?, ?)`,
+            [target_panel_id, target_position, slotPosition, slotPosition === 'single' ? 'single' : 'tandem']
+        );
+        
+        targetBreaker = {
+            id: result.id,
+            panel_id: target_panel_id,
+            position: target_position,
+            slot_position: slotPosition
+        };
+    }
+    
+    // Check if target breaker already has circuits (for validation)
+    const existingCircuits = await dbAll('SELECT * FROM circuits WHERE breaker_id = ?', [targetBreaker.id]);
+    if (existingCircuits.length > 0 && slotPosition === 'single') {
+        return res.status(400).json({ error: 'Target breaker already has circuits' });
+    }
+    
+    // Move the circuit
+    const moveResult = await dbRun(
+        'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+        [targetBreaker.id, req.params.id]
+    );
+    
+    if (moveResult.changes === 0) {
+        return res.status(500).json({ error: 'Failed to move circuit' });
+    }
+    
+    // Get updated circuit with panel info
+    const updatedCircuit = await dbGet(`
+        SELECT c.*, r.name as room_name, r.level as room_level,
+               b.position, b.slot_position, b.panel_id,
+               p.name as panel_name
+        FROM circuits c 
+        LEFT JOIN rooms r ON c.room_id = r.id 
+        JOIN breakers b ON c.breaker_id = b.id
+        JOIN panels p ON b.panel_id = p.id
+        WHERE c.id = ?
+    `, [req.params.id]);
+    
+    res.json({ 
+        message: 'Circuit moved successfully',
+        circuit: updatedCircuit
+    });
+}));
+
 // Static route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

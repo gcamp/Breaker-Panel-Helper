@@ -73,6 +73,17 @@
         "additionalNotes": "Notes supplémentaires...",
         "circuitSaved": "Circuit enregistré avec succès",
         "circuitDeleted": "Circuit supprimé avec succès",
+        "moveCircuit": "Déplacer le Circuit",
+        "currentLocation": "Emplacement Actuel",
+        "newLocation": "Nouvel Emplacement",
+        "panel": "Panneau", 
+        "position": "Position",
+        "targetPanel": "Panneau Cible :",
+        "targetPosition": "Position Cible :",
+        "targetSlot": "Slot Cible :",
+        "circuitMoved": "Circuit déplacé avec succès",
+        "moveCircuitFailed": "Échec du déplacement du circuit",
+        "invalidMoveData": "Données de déplacement invalides",
         
         "types": {
             "outlet": "🔵 Prise",

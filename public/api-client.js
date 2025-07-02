@@ -227,6 +227,32 @@ class ApiClient {
         });
     }
 
+    async moveCircuit(id, targetPanelId, targetPosition, targetSlotPosition = 'single') {
+        if (!this.isValidId(id)) {
+            throw new Error('Invalid circuit ID');
+        }
+        if (!this.isValidId(targetPanelId)) {
+            throw new Error('Invalid target panel ID');
+        }
+        if (!this.isValidPosition(targetPosition)) {
+            throw new Error('Invalid target position');
+        }
+        
+        const validSlots = ['single', 'A', 'B'];
+        if (!validSlots.includes(targetSlotPosition)) {
+            throw new Error(`Target slot position must be one of: ${validSlots.join(', ')}`);
+        }
+        
+        return this.request(`/circuits/${id}/move`, {
+            method: 'PUT',
+            body: {
+                target_panel_id: targetPanelId,
+                target_position: targetPosition,
+                target_slot_position: targetSlotPosition
+            },
+        });
+    }
+
     // Validation helpers
     isValidId(id) {
         const numId = typeof id === 'string' ? parseInt(id) : id;

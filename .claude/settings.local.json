@@ -16,7 +16,9 @@
       "Bash(npm test)",
       "Bash(npm install)",
       "Bash(true)",
-      "Bash(npm run test:api:*)"
+      "Bash(npm run test:api:*)",
+      "Bash(DB_PATH=test_breaker_panel.db node validate-features.js)",
+      "Bash(sqlite3:*)"
     ],
     "deny": []
   }

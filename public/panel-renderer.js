@@ -536,7 +536,10 @@ class PanelRenderer {
         return `
             <div class="circuit-header">
                 <div class="circuit-title">${window.i18n.t('circuits.circuitNumber')} ${this.app.circuitCounter}</div>
-                <button type="button" class="remove-circuit">${window.i18n.t('circuits.removeCircuit')}</button>
+                <div class="circuit-actions">
+                    ${circuitData?.id ? `<button type="button" class="move-circuit">${window.i18n.t('circuits.moveCircuit')}</button>` : ''}
+                    <button type="button" class="remove-circuit">${window.i18n.t('circuits.removeCircuit')}</button>
+                </div>
             </div>
             <div class="circuit-form">
                 <div class="form-group">
@@ -575,6 +578,14 @@ class PanelRenderer {
     }
 
     bindCircuitEvents(circuitDiv, circuitData) {
+        // Move circuit button
+        const moveBtn = circuitDiv.querySelector('.move-circuit');
+        if (moveBtn && circuitData?.id) {
+            moveBtn.addEventListener('click', () => {
+                this.openMoveCircuitModal(circuitData);
+            });
+        }
+        
         // Remove circuit button
         const removeBtn = circuitDiv.querySelector('.remove-circuit');
         removeBtn.addEventListener('click', async () => {
@@ -633,6 +644,157 @@ class PanelRenderer {
                 `<option value="${room.id}" ${selectedId == room.id ? 'selected' : ''}>${levelColors[room.level]} ${room.name}</option>`
             )
             .join('');
+    }
+
+    openMoveCircuitModal(circuitData) {
+        this.app.currentCircuitToMove = circuitData;
+        
+        // Create move modal HTML
+        const modalHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>${window.i18n.t('circuits.moveCircuit')}</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="move-circuit-form">
+                        <div class="move-source">
+                            <h3>${window.i18n.t('circuits.currentLocation')}</h3>
+                            <p>${window.i18n.t('circuits.panel')}: ${this.app.currentPanel.name}</p>
+                            <p>${window.i18n.t('circuits.position')}: ${this.app.currentBreaker.position}${this.app.currentBreaker.slot_position !== 'single' ? this.app.currentBreaker.slot_position : ''}</p>
+                        </div>
+                        
+                        <div class="move-destination">
+                            <h3>${window.i18n.t('circuits.newLocation')}</h3>
+                            <div class="form-group">
+                                <label>${window.i18n.t('circuits.targetPanel')}</label>
+                                <select id="target-panel" required>
+                                    ${this.generatePanelOptions(this.app.currentPanel.id)}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>${window.i18n.t('circuits.targetPosition')}</label>
+                                <input type="number" id="target-position" min="1" max="42" required>
+                            </div>
+                            <div class="form-group">
+                                <label>${window.i18n.t('circuits.targetSlot')}</label>
+                                <select id="target-slot">
+                                    <option value="single">${window.i18n.t('breakers.singleBreaker')}</option>
+                                    <option value="A">${window.i18n.t('breakers.slotA')}</option>
+                                    <option value="B">${window.i18n.t('breakers.slotB')}</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="submit" class="btn-primary">${window.i18n.t('circuits.moveCircuit')}</button>
+                            <button type="button" class="btn-secondary close-modal">${window.i18n.t('app.cancel')}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        // Create or update move modal
+        let moveModal = document.getElementById('move-circuit-modal');
+        if (!moveModal) {
+            moveModal = document.createElement('div');
+            moveModal.id = 'move-circuit-modal';
+            moveModal.className = 'modal';
+            document.body.appendChild(moveModal);
+        }
+        
+        moveModal.innerHTML = modalHTML;
+        
+        // Bind events
+        this.bindMoveModalEvents(moveModal);
+        
+        // Show modal
+        this.app.showModal('move-circuit-modal');
+    }
+
+    generatePanelOptions(currentPanelId) {
+        return this.app.allPanels
+            .map(panel => 
+                `<option value="${panel.id}" ${panel.id === currentPanelId ? 'selected' : ''}>${panel.name}</option>`
+            )
+            .join('');
+    }
+
+    bindMoveModalEvents(modal) {
+        // Target panel change - update max position
+        const targetPanelSelect = modal.querySelector('#target-panel');
+        const targetPositionInput = modal.querySelector('#target-position');
+        
+        targetPanelSelect.addEventListener('change', (e) => {
+            const selectedPanel = this.app.allPanels.find(p => p.id == e.target.value);
+            if (selectedPanel) {
+                targetPositionInput.max = selectedPanel.size;
+                targetPositionInput.placeholder = `1-${selectedPanel.size}`;
+            }
+        });
+        
+        // Initialize max position
+        const initialPanel = this.app.allPanels.find(p => p.id == targetPanelSelect.value);
+        if (initialPanel) {
+            targetPositionInput.max = initialPanel.size;
+            targetPositionInput.placeholder = `1-${initialPanel.size}`;
+        }
+        
+        // Form submission
+        const form = modal.querySelector('#move-circuit-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleMoveCircuit(e);
+        });
+        
+        // Close modal events
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.app.closeModal('move-circuit-modal');
+            });
+        });
+    }
+
+    async handleMoveCircuit(e) {
+        try {
+            const formData = new FormData(e.target);
+            const targetPanelId = parseInt(document.getElementById('target-panel').value);
+            const targetPosition = parseInt(document.getElementById('target-position').value);
+            const targetSlotPosition = document.getElementById('target-slot').value;
+            
+            // Validate inputs
+            if (!targetPanelId || !targetPosition) {
+                throw new Error(window.i18n.t('circuits.invalidMoveData'));
+            }
+            
+            // Call API to move circuit
+            const result = await this.app.api.moveCircuit(
+                this.app.currentCircuitToMove.id,
+                targetPanelId,
+                targetPosition,
+                targetSlotPosition
+            );
+            
+            // Close modals and refresh
+            this.app.closeModal('move-circuit-modal');
+            this.app.closeModal('breaker-modal');
+            
+            // Refresh the panel view
+            this.app.renderPanel();
+            this.app.updatePanelControls();
+            
+            // Update circuit list if displayed
+            if (this.app.isCircuitListVisible()) {
+                this.app.loadCircuitList();
+            }
+            
+            // Show success message
+            this.app.showSuccess(window.i18n.t('circuits.circuitMoved'));
+            
+        } catch (error) {
+            this.app.handleError(window.i18n.t('circuits.moveCircuitFailed'), error);
+        }
     }
 
     toggleBreakerType(e) {

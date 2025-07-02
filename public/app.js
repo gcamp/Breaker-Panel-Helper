@@ -390,6 +390,11 @@ class BreakerPanelApp {
         alert(`${message}: ${userMessage}`);
     }
 
+    showSuccess(message) {
+        console.log('Success:', message);
+        alert(message);
+    }
+
     // ============================================================================
     // PANEL RENDERING METHODS (Delegate to PanelRenderer)
     // ============================================================================

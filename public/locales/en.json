@@ -73,6 +73,17 @@
         "additionalNotes": "Additional notes...",
         "circuitSaved": "Circuit saved successfully",
         "circuitDeleted": "Circuit deleted successfully",
+        "moveCircuit": "Move Circuit",
+        "currentLocation": "Current Location",
+        "newLocation": "New Location", 
+        "panel": "Panel",
+        "position": "Position",
+        "targetPanel": "Target Panel:",
+        "targetPosition": "Target Position:",
+        "targetSlot": "Target Slot:",
+        "circuitMoved": "Circuit moved successfully",
+        "moveCircuitFailed": "Failed to move circuit",
+        "invalidMoveData": "Invalid move data provided",
         
         "types": {
             "outlet": "🔵 Outlet",
