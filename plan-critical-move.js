@@ -140,151 +140,299 @@ class CriticalMovePlanner {
         return strategy;
     }
 
-    // Create sophisticated reorganization plan with temporary disconnections
+    // Create simple swap-based reorganization strategy
     async createMixedTandemReorganization(strategy, sourcePanelId) {
-        const reorganizationMoves = [];
-        const sourcePanel = await this.getPanel(sourcePanelId);
+        const swapMoves = [];
         
-        console.log(`\n🔄 Analyzing ${strategy.mixedTandems.length} mixed tandem positions for reorganization:`);
-        console.log(`   Using temporary disconnections to enable complex reorganization`);
+        console.log(`\n🔄 Creating simple swap strategy for mixed tandems:`);
+        console.log(`   Mixed tandems found: ${strategy.mixedTandems.length}`);
         
-        // Group critical and non-critical breakers by original position
-        const criticalBreakers = [];
-        const nonCriticalBreakers = [];
+        // Find all critical single breakers that can be swapped with non-critical tandem slots
+        const criticalSingles = strategy.pureUnits.filter(unit => 
+            unit.type === 'single_unit' && unit.slots[0].breaker_type === 'single'
+        );
+        
+        console.log(`   Critical single breakers available for swaps: ${criticalSingles.length}`);
+        
+        // Strategy 1: Swap non-critical tandem slots with critical singles
+        const swapPairs = [];
+        const usedSingles = new Set();
+        const unpairedMixedTandems = [];
         
         for (const mixed of strategy.mixedTandems) {
-            console.log(`   Position ${mixed.position}: ${mixed.criticalSlots.length} critical, ${mixed.nonCriticalSlots.length} non-critical`);
+            const nonCriticalBreaker = mixed.nonCriticalSlots[0]; // Take the first non-critical breaker object
+            const criticalBreaker = mixed.criticalSlots[0]; // The critical breaker object that stays
+            const nonCriticalSlot = nonCriticalBreaker.slot_position; // Extract the slot position string
+            const criticalSlot = criticalBreaker.slot_position; // Extract the slot position string
             
-            for (const critical of mixed.criticalSlots) {
-                criticalBreakers.push({
-                    breaker: critical,
-                    originalPosition: mixed.position,
-                    originalSlot: critical.slot_position
-                });
-            }
-            
-            for (const nonCritical of mixed.nonCriticalSlots) {
-                nonCriticalBreakers.push({
-                    breaker: nonCritical,
-                    originalPosition: mixed.position,
-                    originalSlot: nonCritical.slot_position
-                });
-            }
-        }
-        
-        console.log(`   Total: ${criticalBreakers.length} critical, ${nonCriticalBreakers.length} non-critical breakers to reorganize`);
-        
-        // Strategy: Create pairs for new tandem units and separate singles
-        const newCriticalUnits = [];
-        const remainingNonCritical = [];
-        
-        // Try to pair each critical breaker with a non-critical from a different position
-        for (let i = 0; i < criticalBreakers.length; i++) {
-            const critical = criticalBreakers[i];
-            
-            // Find a non-critical partner from a DIFFERENT position
-            const partnerIndex = nonCriticalBreakers.findIndex(nc => 
-                nc.originalPosition !== critical.originalPosition
+            // Find an unused critical single to swap with
+            const availableSingle = criticalSingles.find(single => 
+                !usedSingles.has(single.position)
             );
             
-            if (partnerIndex >= 0) {
-                const partner = nonCriticalBreakers.splice(partnerIndex, 1)[0];
+            if (availableSingle) {
+                usedSingles.add(availableSingle.position);
                 
-                // Use the critical breaker's original position as the target
-                const finalPosition = critical.originalPosition;
+                const singleBreaker = availableSingle.slots[0];
+                // nonCriticalBreaker is already defined above
                 
-                // Create reorganization moves for this pairing
-                // Step 1: Move partner to critical's position (they'll share the tandem)
-                reorganizationMoves.push({
-                    type: 'reorganize_tandem_pair',
-                    step: 1,
-                    reason: 'consolidate_critical_pair',
-                    breaker: partner.breaker,
-                    from: {
-                        panel_id: sourcePanelId,
-                        position: partner.originalPosition,
-                        slot_position: partner.originalSlot
-                    },
-                    to: {
-                        panel_id: sourcePanelId,
-                        position: finalPosition,
-                        slot_position: critical.originalSlot === 'A' ? 'B' : 'A'
-                    },
-                    description: `Move non-critical ${partner.originalSlot} from ${partner.originalPosition} to ${finalPosition} to pair with critical ${critical.originalSlot}`,
-                    temporary_disconnect: true
+                // Create swap moves
+                swapPairs.push({
+                    type: 'single_to_tandem_swap',
+                    mixedPosition: mixed.position,
+                    singlePosition: availableSingle.position,
+                    criticalSlot: criticalSlot,
+                    nonCriticalSlot: nonCriticalSlot,
+                    singleBreaker: singleBreaker,
+                    nonCriticalBreaker: nonCriticalBreaker
                 });
                 
-                newCriticalUnits.push({
-                    type: 'reorganized_tandem_unit',
-                    criticalBreaker: critical,
-                    nonCriticalPartner: partner,
-                    finalPosition: finalPosition,
-                    finalSlots: {
-                        critical: critical.originalSlot,
-                        nonCritical: critical.originalSlot === 'A' ? 'B' : 'A'
-                    }
-                });
+                console.log(`   Swap planned: Position ${mixed.position}${nonCriticalSlot} ↔ Position ${availableSingle.position}`);
             } else {
-                // No partner available - this critical will be moved as single
-                console.log(`   ⚠️ No partner found for critical ${critical.originalPosition}${critical.originalSlot} - will move as single`);
-                strategy.pureUnits.push({
-                    type: 'single_unit',
-                    position: critical.originalPosition,
-                    slots: [critical.breaker]
-                });
+                // No single available - keep for tandem-to-tandem swaps
+                unpairedMixedTandems.push(mixed);
             }
         }
         
-        // Handle remaining non-critical breakers
-        remainingNonCritical.push(...nonCriticalBreakers);
+        // Strategy 2: Swap critical and non-critical slots between remaining mixed tandems
+        console.log(`   Unpaired mixed tandems: ${unpairedMixedTandems.length}`);
         
-        // Find positions for remaining non-critical breakers
-        // We can use positions that will be freed by moving critical pairs
-        const positionsToBeFreed = new Set();
-        for (const unit of newCriticalUnits) {
-            if (unit.nonCriticalPartner.originalPosition !== unit.finalPosition) {
-                positionsToBeFreed.add(unit.nonCriticalPartner.originalPosition);
-            }
-        }
-        
-        console.log(`   Positions to be freed: ${Array.from(positionsToBeFreed).sort((a,b) => a-b).join(', ')}`);
-        
-        // Assign freed positions to remaining non-critical breakers
-        const freedPositions = Array.from(positionsToBeFreed).sort((a,b) => a-b);
-        for (let i = 0; i < remainingNonCritical.length && i < freedPositions.length; i++) {
-            const remaining = remainingNonCritical[i];
-            const targetPosition = freedPositions[i];
+        while (unpairedMixedTandems.length >= 2) {
+            const tandem1 = unpairedMixedTandems.shift();
+            const tandem2 = unpairedMixedTandems.shift();
             
-            reorganizationMoves.push({
-                type: 'reorganize_single',
-                step: 2,
-                reason: 'place_remaining_non_critical',
-                breaker: remaining.breaker,
-                from: {
-                    panel_id: sourcePanelId,
-                    position: remaining.originalPosition,
-                    slot_position: remaining.originalSlot
-                },
-                to: {
-                    panel_id: sourcePanelId,
-                    position: targetPosition,
-                    slot_position: 'single'
-                },
-                description: `Move remaining non-critical ${remaining.originalSlot} from ${remaining.originalPosition} to freed position ${targetPosition}`,
-                temporary_disconnect: true
+            const t1Critical = tandem1.criticalSlots[0];
+            const t1NonCritical = tandem1.nonCriticalSlots[0];
+            const t2Critical = tandem2.criticalSlots[0];
+            const t2NonCritical = tandem2.nonCriticalSlots[0];
+            
+            // Swap: T1's critical goes to T2's non-critical slot, T2's critical goes to T1's non-critical slot
+            swapPairs.push({
+                type: 'tandem_to_tandem_swap',
+                tandem1Position: tandem1.position,
+                tandem2Position: tandem2.position,
+                t1Critical: t1Critical,
+                t1NonCritical: t1NonCritical,
+                t2Critical: t2Critical,
+                t2NonCritical: t2NonCritical
+            });
+            
+            console.log(`   Tandem swap planned: ${tandem1.position}${t1Critical.slot_position} ↔ ${tandem2.position}${t2NonCritical.slot_position}, ${tandem2.position}${t2Critical.slot_position} ↔ ${tandem1.position}${t1NonCritical.slot_position}`);
+        }
+        
+        // Strategy 3: Any remaining single mixed tandem just moves critical slots only
+        for (const remaining of unpairedMixedTandems) {
+            console.log(`   ⚠️ Unpaired mixed tandem at position ${remaining.position} - moving critical slots only`);
+            const criticalBreakersInMixed = remaining.allSlots.filter(b => b.critical);
+            strategy.pureUnits.push({
+                type: 'mixed_tandem_unit',
+                position: remaining.position,
+                slots: criticalBreakersInMixed
             });
         }
         
-        // Any remaining non-critical breakers that couldn't be placed stay where they are
-        // (this shouldn't happen with our example data, but good to handle)
+        // Create the swap moves
+        for (const swap of swapPairs) {
+            if (swap.type === 'single_to_tandem_swap') {
+                const singleSide = this.isLeftSide(swap.singlePosition) ? 'left' : 'right';
+                const tandemSide = this.isLeftSide(swap.mixedPosition) ? 'left' : 'right';
+                const sideChange = singleSide !== tandemSide;
+                
+                // Move 1: Single breaker to tandem position
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'swap_for_critical_consolidation',
+                    breaker: swap.singleBreaker,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.singlePosition,
+                        slot_position: 'single'
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.mixedPosition,
+                        slot_position: swap.nonCriticalSlot
+                    },
+                    description: `Swap: Move critical single from ${swap.singlePosition} to ${swap.mixedPosition}${swap.nonCriticalSlot}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Move 2: Non-critical tandem slot to single position  
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'swap_for_critical_consolidation',
+                    breaker: swap.nonCriticalBreaker,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.mixedPosition,
+                        slot_position: swap.nonCriticalSlot
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.singlePosition,
+                        slot_position: 'single'
+                    },
+                    description: `Swap: Move non-critical from ${swap.mixedPosition}${swap.nonCriticalSlot} to ${swap.singlePosition}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Update strategy - remove the single unit and convert mixed tandem to pure critical tandem
+                strategy.pureUnits = strategy.pureUnits.filter(unit => unit.position !== swap.singlePosition);
+                
+                // Find the mixed tandem that corresponds to this swap
+                const mixedTandem = strategy.mixedTandems.find(m => m.position === swap.mixedPosition);
+                const criticalBreaker = mixedTandem.allSlots.find(b => b.slot_position === swap.criticalSlot);
+                
+                // Update the single breaker to reflect its new position and slot
+                const updatedSingleBreaker = {
+                    ...swap.singleBreaker,
+                    position: swap.mixedPosition,
+                    slot_position: swap.nonCriticalSlot
+                };
+                
+                strategy.pureUnits.push({
+                    type: 'tandem_unit',
+                    position: swap.mixedPosition,
+                    slots: [criticalBreaker, updatedSingleBreaker] // Both critical breakers
+                });
+                
+            } else if (swap.type === 'tandem_to_tandem_swap') {
+                const t1Side = this.isLeftSide(swap.tandem1Position) ? 'left' : 'right';
+                const t2Side = this.isLeftSide(swap.tandem2Position) ? 'left' : 'right';
+                const sideChange = t1Side !== t2Side;
+                
+                // Move 1: T1's critical to T2's non-critical slot
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'tandem_to_tandem_swap',
+                    breaker: swap.t1Critical,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem1Position,
+                        slot_position: swap.t1Critical.slot_position
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem2Position,
+                        slot_position: swap.t2NonCritical.slot_position
+                    },
+                    description: `Tandem swap: Move critical from ${swap.tandem1Position}${swap.t1Critical.slot_position} to ${swap.tandem2Position}${swap.t2NonCritical.slot_position}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Move 2: T2's non-critical to T1's critical slot
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'tandem_to_tandem_swap',
+                    breaker: swap.t2NonCritical,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem2Position,
+                        slot_position: swap.t2NonCritical.slot_position
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem1Position,
+                        slot_position: swap.t1Critical.slot_position
+                    },
+                    description: `Tandem swap: Move non-critical from ${swap.tandem2Position}${swap.t2NonCritical.slot_position} to ${swap.tandem1Position}${swap.t1Critical.slot_position}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Move 3: T2's critical to T1's non-critical slot
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'tandem_to_tandem_swap',
+                    breaker: swap.t2Critical,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem2Position,
+                        slot_position: swap.t2Critical.slot_position
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem1Position,
+                        slot_position: swap.t1NonCritical.slot_position
+                    },
+                    description: `Tandem swap: Move critical from ${swap.tandem2Position}${swap.t2Critical.slot_position} to ${swap.tandem1Position}${swap.t1NonCritical.slot_position}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Move 4: T1's non-critical to T2's critical slot
+                swapMoves.push({
+                    type: 'swap_move',
+                    step: 1,
+                    reason: 'tandem_to_tandem_swap',
+                    breaker: swap.t1NonCritical,
+                    from: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem1Position,
+                        slot_position: swap.t1NonCritical.slot_position
+                    },
+                    to: {
+                        panel_id: sourcePanelId,
+                        position: swap.tandem2Position,
+                        slot_position: swap.t2Critical.slot_position
+                    },
+                    description: `Tandem swap: Move non-critical from ${swap.tandem1Position}${swap.t1NonCritical.slot_position} to ${swap.tandem2Position}${swap.t2Critical.slot_position}`,
+                    temporary_disconnect: true,
+                    side_change: sideChange
+                });
+                
+                // Update strategy - create two pure critical tandem units
+                const updatedT1Critical = {
+                    ...swap.t1Critical,
+                    position: swap.tandem1Position,
+                    slot_position: swap.t1Critical.slot_position
+                };
+                const updatedT2Critical = {
+                    ...swap.t2Critical,
+                    position: swap.tandem1Position,
+                    slot_position: swap.t1NonCritical.slot_position
+                };
+                
+                strategy.pureUnits.push({
+                    type: 'tandem_unit',
+                    position: swap.tandem1Position,
+                    slots: [updatedT1Critical, updatedT2Critical] // Both critical breakers
+                });
+                
+                const updatedT1CriticalInT2 = {
+                    ...swap.t1Critical,
+                    position: swap.tandem2Position,
+                    slot_position: swap.t2NonCritical.slot_position
+                };
+                const updatedT2CriticalInT2 = {
+                    ...swap.t2Critical,
+                    position: swap.tandem2Position,
+                    slot_position: swap.t2Critical.slot_position
+                };
+                
+                strategy.pureUnits.push({
+                    type: 'tandem_unit',
+                    position: swap.tandem2Position,
+                    slots: [updatedT1CriticalInT2, updatedT2CriticalInT2] // Both critical breakers
+                });
+            }
+        }
         
-        // Update strategy with reorganized units
-        strategy.reorganizedUnits = newCriticalUnits;
-        strategy.reorganizationMoves = reorganizationMoves;
+        // Update strategy
+        strategy.swapMoves = swapMoves;
+        strategy.reorganizationMoves = swapMoves; // For compatibility with existing code
         
-        console.log(`   ✅ Created ${newCriticalUnits.length} reorganized critical tandem units`);
-        console.log(`   📋 Reorganization moves needed: ${reorganizationMoves.length}`);
-        console.log(`   🔌 All moves allow temporary disconnection for complex reorganization`);
+        console.log(`   ✅ Created ${swapPairs.length} position swaps`);
+        console.log(`   📋 Swap moves needed: ${swapMoves.length}`);
+        console.log(`   🔄 All swaps keep non-critical breakers in main panel`);
         
         return strategy;
     }
@@ -491,36 +639,19 @@ class CriticalMovePlanner {
     }
 
     // Create progressive delivery batches for safe execution with temporary disconnections
-    createProgressiveBatches(reorganizationMoves, criticalMoves) {
+    createProgressiveBatches(swapMoves, criticalMoves) {
         const batches = [];
         
-        // Phase 1: Reorganization moves (allowing temporary disconnections)
-        if (reorganizationMoves.length > 0) {
-            // Group reorganization moves by step
-            const step1Moves = reorganizationMoves.filter(m => m.step === 1);
-            const step2Moves = reorganizationMoves.filter(m => m.step === 2);
-            
-            if (step1Moves.length > 0) {
-                batches.push({
-                    batch_number: batches.length + 1,
-                    type: 'reorganization_step1',
-                    moves: step1Moves,
-                    description: `Reorganize tandems: pair critical breakers with non-critical partners (${step1Moves.length} moves)`,
-                    allows_temporary_disconnect: true,
-                    functional_completion: 'Critical tandems paired for efficient moving'
-                });
-            }
-            
-            if (step2Moves.length > 0) {
-                batches.push({
-                    batch_number: batches.length + 1,
-                    type: 'reorganization_step2', 
-                    moves: step2Moves,
-                    description: `Place remaining non-critical breakers (${step2Moves.length} moves)`,
-                    allows_temporary_disconnect: true,
-                    functional_completion: 'All non-critical breakers properly positioned'
-                });
-            }
+        // Phase 1: Position swaps (allowing temporary disconnections)
+        if (swapMoves.length > 0) {
+            batches.push({
+                batch_number: batches.length + 1,
+                type: 'position_swaps',
+                moves: swapMoves,
+                description: `Position swaps: critical singles ↔ non-critical tandem slots (${swapMoves.length} moves)`,
+                allows_temporary_disconnect: true,
+                functional_completion: 'All critical breakers consolidated into tandem units'
+            });
         }
         
         // Phase 2: Critical moves to target panel (functional batches per unit)
@@ -528,8 +659,8 @@ class CriticalMovePlanner {
         while (remainingCritical.length > 0) {
             const batch = [];
             
-            // Group moves by physical unit (same source position for reorganized tandems)
-            if (remainingCritical[0].unit_type === 'tandem_unit' || remainingCritical[0].unit_type === 'reorganized_tandem_unit') {
+            // Group moves by physical unit (same source position for tandems)
+            if (remainingCritical[0].unit_type === 'tandem_unit' || remainingCritical[0].unit_type === 'mixed_tandem_unit') {
                 // Take all moves for this tandem unit
                 const unitPosition = remainingCritical[0].from.position;
                 while (remainingCritical.length > 0 && remainingCritical[0].from.position === unitPosition) {
@@ -546,8 +677,8 @@ class CriticalMovePlanner {
             let description;
             if (batch.length === 1) {
                 description = `Move critical breaker from position ${batch[0].from.position}`;
-            } else if (unitType === 'reorganized_tandem_unit') {
-                description = `Move reorganized tandem unit from position ${batch[0].from.position} (${batch.length} slots)`;
+            } else if (unitType === 'mixed_tandem_unit') {
+                description = `Move critical tandem unit from position ${batch[0].from.position} (${batch.length} slots)`;
             } else {
                 description = `Move complete tandem unit from position ${batch[0].from.position} (${batch.length} slots)`;
             }
@@ -590,21 +721,17 @@ class CriticalMovePlanner {
             strategy = await this.createMixedTandemReorganization(strategy, sourcePanelId);
         }
 
-        // Calculate moves to target panel
-        const unitsToMove = [
-            ...strategy.pureUnits,
-            ...(strategy.reorganizedUnits || [])
-        ];
+        // Calculate moves to target panel - only pure critical units
+        const unitsToMove = strategy.pureUnits;
 
         console.log(`\n📦 Units to move to critical panel:`);
         console.log(`   Pure critical units: ${strategy.pureUnits.length}`);
-        console.log(`   Reorganized tandem units: ${(strategy.reorganizedUnits || []).length}`);
         console.log(`   Total units: ${unitsToMove.length}`);
 
         // Calculate required space in target panel
         let requiredSpaces = 0;
         for (const unit of unitsToMove) {
-            if (unit.type === 'tandem_unit' || unit.type === 'reorganized_tandem_unit') {
+            if (unit.type === 'tandem_unit' || unit.type === 'mixed_tandem_unit') {
                 requiredSpaces += 1;
             } else {
                 const breaker = unit.slots[0];
@@ -628,15 +755,23 @@ class CriticalMovePlanner {
 
             const targetPos = availablePositions[positionIndex];
 
-            if (unit.type === 'tandem_unit') {
-                // Pure critical tandem (both slots critical)
+            if (unit.type === 'tandem_unit' || unit.type === 'mixed_tandem_unit') {
+                // Critical tandem unit (all slots are critical)
+                if (!unit.slots || unit.slots.length === 0) {
+                    console.error('Unit has no slots:', unit);
+                    continue;
+                }
                 for (let i = 0; i < unit.slots.length; i++) {
                     const slot = unit.slots[i];
+                    if (!slot) {
+                        console.error('Slot is undefined at index', i, 'in unit:', unit);
+                        continue;
+                    }
                     const targetSlot = unit.slots.length === 1 ? 'single' : (i === 0 ? 'A' : 'B');
                     
                     criticalMoves.push({
                         type: 'critical_move',
-                        unit_type: 'tandem_unit',
+                        unit_type: unit.type,
                         breaker: slot,
                         from: {
                             panel_id: slot.panel_id,
@@ -651,54 +786,10 @@ class CriticalMovePlanner {
                             slot_position: targetSlot
                         },
                         side_change: false,
-                        description: `Critical tandem: ${slot.circuit_descriptions?.substring(0, 40) || 'No description'}...`
+                        description: `Critical tandem: ${slot.circuit_descriptions?.substring(0, 40) || 'No description'}...`,
+                        is_critical_breaker: true
                     });
                 }
-                positionIndex += 1;
-            } else if (unit.type === 'reorganized_tandem_unit') {
-                // Reorganized tandem (critical + non-critical partner)
-                const critical = unit.criticalBreaker.breaker;
-                const nonCritical = unit.nonCriticalPartner.breaker;
-                
-                criticalMoves.push({
-                    type: 'critical_move',
-                    unit_type: 'reorganized_tandem_unit',
-                    breaker: critical,
-                    from: {
-                        panel_id: critical.panel_id,
-                        panel_name: critical.panel_name,
-                        position: unit.finalPosition,
-                        slot_position: critical.slot_position
-                    },
-                    to: {
-                        panel_id: targetPanelId,
-                        panel_name: targetPanel.name,
-                        position: targetPos.position,
-                        slot_position: 'A'
-                    },
-                    side_change: false,
-                    description: `Critical reorganized: ${critical.circuit_descriptions?.substring(0, 40) || 'No description'}...`
-                });
-                
-                criticalMoves.push({
-                    type: 'critical_move',
-                    unit_type: 'reorganized_tandem_unit',
-                    breaker: nonCritical,
-                    from: {
-                        panel_id: nonCritical.panel_id,
-                        panel_name: nonCritical.panel_name,
-                        position: unit.finalPosition,
-                        slot_position: nonCritical.slot_position === critical.slot_position ? (critical.slot_position === 'A' ? 'B' : 'A') : nonCritical.slot_position
-                    },
-                    to: {
-                        panel_id: targetPanelId,
-                        panel_name: targetPanel.name,
-                        position: targetPos.position,
-                        slot_position: 'B'
-                    },
-                    side_change: false,
-                    description: `Non-critical partner: ${nonCritical.circuit_descriptions?.substring(0, 40) || 'No description'}...`
-                });
                 positionIndex += 1;
             } else {
                 // Single unit
@@ -721,7 +812,8 @@ class CriticalMovePlanner {
                         slot_position: breaker.slot_position
                     },
                     side_change: false,
-                    description: `Critical ${breaker.breaker_type}: ${breaker.circuit_descriptions?.substring(0, 40) || 'No description'}...`
+                    description: `Critical ${breaker.breaker_type}: ${breaker.circuit_descriptions?.substring(0, 40) || 'No description'}...`,
+                    is_critical_breaker: breaker.critical
                 });
 
                 positionIndex += breaker.breaker_type === 'double_pole' ? 2 : 1;
@@ -738,11 +830,11 @@ class CriticalMovePlanner {
                 critical_moves: criticalMoves.length,
                 mixed_tandems: strategy.mixedTandems.length,
                 pure_units: strategy.pureUnits.length,
-                reorganized_units: (strategy.reorganizedUnits || []).length,
+                swaps_performed: strategy.swapMoves ? strategy.swapMoves.length / 2 : 0,
                 total_batches: batches.length
             },
             phases: {
-                phase1_reorganization: strategy.reorganizationMoves || [],
+                phase1_swaps: strategy.reorganizationMoves || [],
                 phase2_critical_moves: criticalMoves
             },
             progressive_batches: batches,
@@ -757,23 +849,27 @@ class CriticalMovePlanner {
         
         console.log(`\n📊 Summary:`);
         console.log(`   Total moves required: ${plan.summary.total_moves}`);
-        console.log(`   Reorganization moves: ${plan.summary.reorganization_moves}`);
+        console.log(`   Swap moves: ${plan.summary.reorganization_moves}`);
         console.log(`   Critical moves: ${plan.summary.critical_moves}`);
-        console.log(`   Mixed tandems analyzed: ${plan.summary.mixed_tandems}`);
+        console.log(`   Mixed tandems resolved: ${plan.summary.mixed_tandems}`);
         console.log(`   Pure critical units: ${plan.summary.pure_units}`);
-        console.log(`   Reorganized tandem units: ${plan.summary.reorganized_units}`);
+        console.log(`   Position swaps performed: ${plan.summary.swaps_performed}`);
         console.log(`   Functional batches: ${plan.summary.total_batches}`);
 
-        if (plan.phases.phase1_reorganization.length > 0) {
-            console.log(`\n🔄 PHASE 1 - REORGANIZATION (${plan.phases.phase1_reorganization.length} moves)`);
+        if (plan.phases.phase1_swaps.length > 0) {
+            console.log(`\n🔄 PHASE 1 - POSITION SWAPS (${plan.phases.phase1_swaps.length} moves)`);
             console.log(`────────────────────────────────────────`);
-            console.log(`Purpose: Free up space by reorganizing tandem breakers`);
+            console.log(`Purpose: Swap critical singles with non-critical tandem slots`);
+            console.log(`Result: Non-critical breakers stay in main panel, critical tandems ready to move`);
             
-            plan.phases.phase1_reorganization.forEach((move, i) => {
+            plan.phases.phase1_swaps.forEach((move, i) => {
                 console.log(`\n${i + 1}. ${move.description}`);
                 console.log(`   From: Panel ${move.from.panel_id}, Position ${move.from.position}${move.from.slot_position}`);
                 console.log(`   To:   Panel ${move.to.panel_id}, Position ${move.to.position}${move.to.slot_position}`);
                 console.log(`   Reason: ${move.reason}`);
+                if (move.side_change) {
+                    console.log(`   ⚠️ SIDE CHANGE required`);
+                }
             });
         }
 
@@ -789,7 +885,7 @@ class CriticalMovePlanner {
             console.log(`   Circuits: ${move.breaker.circuit_count} circuits`);
             console.log(`   Description: ${move.description}`);
             if (move.side_change) {
-                console.log(`   ⚠️ Side change required`);
+                console.log(`   ⚠️ SIDE CHANGE required`);
             }
         });
 
@@ -803,6 +899,32 @@ class CriticalMovePlanner {
             console.log(`   Type: ${batch.type.replace('_', ' ').toUpperCase()}`);
             console.log(`   Moves: ${batch.moves.length}`);
             
+            // Show which critical breakers are being moved in this batch
+            if (batch.type === 'critical_moves') {
+                const criticalBreakersInBatch = batch.moves.filter(move => 
+                    move.is_critical_breaker === true || (move.breaker && move.breaker.critical)
+                );
+                const nonCriticalPartnersInBatch = batch.moves.filter(move => 
+                    move.is_critical_breaker === false || (move.breaker && !move.breaker.critical && move.unit_type === 'reorganized_tandem_unit')
+                );
+                
+                if (criticalBreakersInBatch.length > 0) {
+                    console.log(`   🔋 Critical breakers being moved to critical panel:`);
+                    criticalBreakersInBatch.forEach(move => {
+                        const desc = move.breaker.circuit_descriptions || 'No description';
+                        console.log(`      - ${move.breaker.amperage}A from ${move.from.position}${move.from.slot_position !== 'single' ? move.from.slot_position : ''}: ${desc.substring(0, 50)}...`);
+                    });
+                }
+                
+                if (nonCriticalPartnersInBatch.length > 0) {
+                    console.log(`   ⚙️ Non-critical partners moving with critical breakers:`);
+                    nonCriticalPartnersInBatch.forEach(move => {
+                        const desc = move.breaker.circuit_descriptions || 'No description';
+                        console.log(`      - ${move.breaker.amperage}A from ${move.from.position}${move.from.slot_position !== 'single' ? move.from.slot_position : ''}: ${desc.substring(0, 50)}...`);
+                    });
+                }
+            }
+            
             batch.moves.forEach((move, i) => {
                 const fromPanel = move.from.panel_name || `Panel ${move.from.panel_id}`;
                 const toPanel = move.to.panel_name || `Panel ${move.to.panel_id}`;
@@ -810,11 +932,20 @@ class CriticalMovePlanner {
                 const toPos = `${move.to.position}${move.to.slot_position !== 'single' ? move.to.slot_position : ''}`;
                 
                 let flags = '';
-                if (move.side_change) flags += ' ⚠️ side change';
+                if (move.side_change) flags += ' ⚠️ SIDE CHANGE';
                 if (move.temporary_disconnect) flags += ' 🔌 temp disconnect OK';
                 
-                console.log(`   ${i + 1}. ${fromPanel} ${fromPos} → ${toPanel} ${toPos}${flags}`);
+                // Add critical indicator
+                const isCritical = move.is_critical_breaker === true || (move.breaker && move.breaker.critical);
+                const criticalIndicator = isCritical ? '🔋 ' : '';
+                
+                console.log(`   ${i + 1}. ${criticalIndicator}${fromPanel} ${fromPos} → ${toPanel} ${toPos}${flags}`);
             });
+            
+            // Show completion status
+            if (batch.functional_completion) {
+                console.log(`   ✅ Completion: ${batch.functional_completion}`);
+            }
         });
 
         console.log(`\n✅ EXECUTION READY`);

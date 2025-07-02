@@ -875,23 +875,89 @@ class BreakerPanelApp {
 
         let html = '';
         levelOrder.forEach(level => {
+            html += `<div class="room-level-group" data-level="${level}">
+                <h4>${levelColors[level]} ${levelNames[level]}</h4>
+                <div class="room-items drop-zone">`;
+            
             if (roomsByLevel[level]) {
-                html += `<div class="room-level-group">
-                    <h4>${levelColors[level]} ${levelNames[level]}</h4>
-                    <div class="room-items">`;
-                
                 roomsByLevel[level].forEach(room => {
-                    html += `<div class="room-item" data-level="${level}">
+                    html += `<div class="room-item" 
+                        data-room-id="${room.id}" 
+                        data-level="${level}" 
+                        draggable="true">
                         <span class="room-name">${room.name}</span>
                         <button class="delete-room-btn" onclick="app.deleteRoom(${room.id})">${window.i18n.t('app.delete')}</button>
                     </div>`;
                 });
-                
-                html += `</div></div>`;
             }
+            
+            html += `</div></div>`;
         });
 
         container.innerHTML = html;
+        this.setupRoomDragAndDrop();
+    }
+
+    setupRoomDragAndDrop() {
+        const roomItems = document.querySelectorAll('.room-item[draggable]');
+        const dropZones = document.querySelectorAll('.room-items.drop-zone');
+        
+        // Setup drag events for room items
+        roomItems.forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', item.dataset.roomId);
+                item.classList.add('dragging');
+            });
+            
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('dragging');
+            });
+        });
+        
+        // Setup drop events for level groups
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+            
+            zone.addEventListener('dragleave', (e) => {
+                if (!zone.contains(e.relatedTarget)) {
+                    zone.classList.remove('drag-over');
+                }
+            });
+            
+            zone.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                
+                const roomId = parseInt(e.dataTransfer.getData('text/plain'));
+                const targetLevel = zone.closest('.room-level-group').dataset.level;
+                const draggedItem = document.querySelector(`[data-room-id="${roomId}"]`);
+                const currentLevel = draggedItem.dataset.level;
+                
+                if (targetLevel !== currentLevel) {
+                    await this.moveRoomToLevel(roomId, targetLevel);
+                }
+            });
+        });
+    }
+
+    async moveRoomToLevel(roomId, newLevel) {
+        try {
+            const room = this.allRooms.find(r => r.id === roomId);
+            if (!room) return;
+            
+            await this.api.updateRoom(roomId, {
+                name: room.name,
+                level: newLevel
+            });
+            
+            await this.loadAllRooms();
+            this.loadRoomsList();
+        } catch (error) {
+            this.handleError('Failed to move room to new level', error);
+        }
     }
 }
 

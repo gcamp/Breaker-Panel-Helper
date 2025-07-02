@@ -314,7 +314,7 @@ class ApiClient {
             throw new Error('Room name is required and must be a non-empty string');
         }
         
-        const validLevels = ['basement', 'main', 'upper'];
+        const validLevels = ['basement', 'main', 'upper', 'outside'];
         if (!data.level || !validLevels.includes(data.level)) {
             throw new Error(`Level must be one of: ${validLevels.join(', ')}`);
         }
