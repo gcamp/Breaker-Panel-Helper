@@ -30,16 +30,34 @@ class PanelRenderer {
         
         breakerContainer.innerHTML = `
             ${isLeft ? '<div class="breaker-amperage-box left"></div>' : ''}
-            <div class="breaker" data-position="${position}">
-                <div class="breaker-number">${position}</div>
-                <div class="breaker-label"></div>
-                <div class="breaker-indicators"></div>
+            <div class="breaker-slot" data-position="${position}">
+                <div class="breaker single-breaker" data-position="${position}" data-slot="single">
+                    <div class="breaker-number">${position}</div>
+                    <div class="breaker-label"></div>
+                    <div class="breaker-indicators"></div>
+                </div>
+                <div class="tandem-breakers" style="display: none;">
+                    <div class="breaker tandem-a" data-position="${position}" data-slot="A">
+                        <div class="breaker-number">${position}A</div>
+                        <div class="breaker-label"></div>
+                        <div class="breaker-indicators"></div>
+                    </div>
+                    <div class="breaker tandem-b" data-position="${position}" data-slot="B">
+                        <div class="breaker-number">${position}B</div>
+                        <div class="breaker-label"></div>
+                        <div class="breaker-indicators"></div>
+                    </div>
+                </div>
             </div>
             ${!isLeft ? '<div class="breaker-amperage-box right"></div>' : ''}
         `;
         
-        breakerContainer.querySelector('.breaker').addEventListener('click', () => {
-            this.openBreakerModal(position);
+        // Add event listeners for all breaker types
+        breakerContainer.querySelectorAll('.breaker').forEach(breaker => {
+            breaker.addEventListener('click', () => {
+                const slot = breaker.dataset.slot;
+                this.openBreakerModal(position, slot);
+            });
         });
         
         return breakerContainer;
@@ -50,25 +68,100 @@ class PanelRenderer {
         
         try {
             const breakers = await this.app.api.getBreakersByPanel(this.app.currentPanel.id);
-            for (const breaker of breakers) {
-                await this.updateBreakerDisplay(breaker);
+            
+            // Group breakers by position to handle tandems properly
+            const breakersByPosition = {};
+            breakers.forEach(breaker => {
+                if (!breakersByPosition[breaker.position]) {
+                    breakersByPosition[breaker.position] = [];
+                }
+                breakersByPosition[breaker.position].push(breaker);
+            });
+            
+            // Update display for each position
+            for (const [position, positionBreakers] of Object.entries(breakersByPosition)) {
+                await this.updatePositionDisplay(parseInt(position), positionBreakers);
             }
         } catch (error) {
             this.app.handleError('Failed to load breakers', error);
         }
     }
 
-    async updateBreakerDisplay(breaker) {
-        const breakerElement = document.querySelector(`[data-position="${breaker.position}"]`);
-        if (!breakerElement) return;
+    async updatePositionDisplay(position, breakers) {
+        const container = document.querySelector(`[data-position="${position}"]`).closest('.breaker-container');
+        if (!container) return;
 
-        breakerElement.classList.add('occupied');
+        // Reset container state
+        container.classList.remove('has-tandem');
+        container.querySelectorAll('.breaker').forEach(elem => {
+            elem.classList.remove('occupied');
+            elem.querySelector('.breaker-label').textContent = '';
+            elem.querySelector('.breaker-indicators').innerHTML = '';
+        });
+
+        // Check if we have tandem breakers at this position
+        const hasTandem = breakers.some(b => b.tandem || b.breaker_type === 'tandem');
         
+        if (hasTandem) {
+            container.classList.add('has-tandem');
+            for (const breaker of breakers) {
+                const breakerElement = container.querySelector(`[data-slot="${breaker.slot_position}"]`);
+                if (breakerElement) {
+                    breakerElement.classList.add('occupied');
+                    await this.updateBreakerContent(breakerElement, breaker, container);
+                }
+            }
+        } else {
+            // Single breaker at this position
+            const breaker = breakers[0];
+            const breakerElement = container.querySelector('.single-breaker');
+            if (breakerElement) {
+                breakerElement.classList.add('occupied');
+                await this.updateBreakerContent(breakerElement, breaker, container);
+            }
+        }
+    }
+
+    async updateBreakerDisplay(breaker) {
+        // This method is now mainly used for individual updates
+        // Most loading is handled by updatePositionDisplay
+        const container = document.querySelector(`[data-position="${breaker.position}"]`).closest('.breaker-container');
+        if (!container) return;
+
+        const isTandem = breaker.tandem || breaker.breaker_type === 'tandem';
+        if (isTandem) {
+            container.classList.add('has-tandem');
+            const breakerElement = container.querySelector(`[data-slot="${breaker.slot_position}"]`);
+            if (breakerElement) {
+                breakerElement.classList.add('occupied');
+                await this.updateBreakerContent(breakerElement, breaker, container);
+            }
+        } else {
+            // For single breakers, check if there are any tandem breakers at this position
+            const allBreakersAtPosition = await this.app.api.getBreakersByPanel(this.app.currentPanel.id);
+            const positionBreakers = allBreakersAtPosition.filter(b => b.position === breaker.position);
+            const hasTandem = positionBreakers.some(b => b.tandem || b.breaker_type === 'tandem');
+            
+            if (!hasTandem) {
+                container.classList.remove('has-tandem');
+                const breakerElement = container.querySelector('.single-breaker');
+                if (breakerElement) {
+                    breakerElement.classList.add('occupied');
+                    await this.updateBreakerContent(breakerElement, breaker, container);
+                }
+            }
+        }
+    }
+
+    async updateBreakerContent(breakerElement, breaker, container) {
         // Handle flags
         this.updateBreakerFlags(breakerElement, breaker);
         
-        // Handle double pole
-        this.updateDoublePoleDisplay(breakerElement, breaker);
+        // Handle double pole (only for non-tandem breakers)
+        const isTandem = breaker.tandem || breaker.breaker_type === 'tandem';
+        if (!isTandem) {
+            this.updateDoublePoleDisplay(breakerElement, breaker);
+        }
         
         // Update label with subpanel info
         const displayLabel = await this.getBreakerDisplayLabel(breaker);
@@ -87,15 +180,18 @@ class PanelRenderer {
         // Update classes for styling
         container.classList.toggle('critical', breaker.critical);
         container.classList.toggle('monitor', breaker.monitor);
+        container.classList.toggle('confirmed', breaker.confirmed);
         
         breakerElement.classList.toggle('critical', breaker.critical);
         breakerElement.classList.toggle('monitor', breaker.monitor);
+        breakerElement.classList.toggle('confirmed', breaker.confirmed);
     }
 
     updateDoublePoleDisplay(breakerElement, breaker) {
         const container = breakerElement.closest('.breaker-container');
+        const isDoublePole = breaker.double_pole || breaker.breaker_type === 'double_pole';
         
-        if (breaker.double_pole) {
+        if (isDoublePole) {
             breakerElement.classList.add('double-pole');
             container.classList.add('double-pole-container');
             
@@ -130,17 +226,25 @@ class PanelRenderer {
         
         try {
             const circuits = await this.app.api.getCircuitsByBreaker(breaker.id);
+            
+            // If no manual label is set, auto-generate one from circuits
+            if (!displayLabel && circuits.length > 0) {
+                displayLabel = this.generateAutoLabel(circuits);
+            }
+            
             const subpanelCircuit = circuits.find(circuit => 
                 circuit.type === 'subpanel' && circuit.subpanel_id
             );
             
-            if (subpanelCircuit) {
+            const isDoublePole = breaker.double_pole || breaker.breaker_type === 'double_pole';
+            if (subpanelCircuit && isDoublePole) {
                 const linkedPanel = this.app.allPanels.find(panel => 
                     panel.id === subpanelCircuit.subpanel_id
                 );
                 if (linkedPanel) {
+                    // Put subpanel link on second line for double pole breakers only
                     displayLabel = displayLabel 
-                        ? `${displayLabel} → ${linkedPanel.name}` 
+                        ? `${displayLabel}\n→ ${linkedPanel.name}` 
                         : `→ ${linkedPanel.name}`;
                     const breakerElement = document.querySelector(`[data-position="${breaker.position}"]`);
                     if (breakerElement) breakerElement.classList.add('has-subpanel');
@@ -154,6 +258,123 @@ class PanelRenderer {
         }
         
         return displayLabel;
+    }
+
+    generateAutoLabel(circuits) {
+        // Group circuits by type
+        const circuitsByType = circuits.reduce((acc, circuit) => {
+            const type = circuit.type || 'other';
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(circuit);
+            return acc;
+        }, {});
+
+        const labelParts = [];
+
+        // Handle appliances first (use notes as main value)
+        if (circuitsByType.appliance) {
+            circuitsByType.appliance.forEach(circuit => {
+                if (circuit.notes && circuit.notes.trim()) {
+                    labelParts.push(circuit.notes.trim());
+                } else if (circuit.room && circuit.room.trim()) {
+                    labelParts.push(`${circuit.room} appliance`);
+                } else {
+                    labelParts.push('Appliance');
+                }
+            });
+        }
+
+        // Handle heating (use notes or type + room)
+        if (circuitsByType.heating) {
+            circuitsByType.heating.forEach(circuit => {
+                if (circuit.notes && circuit.notes.trim()) {
+                    labelParts.push(circuit.notes.trim());
+                } else if (circuit.room && circuit.room.trim()) {
+                    labelParts.push(`${circuit.room} heating`);
+                } else {
+                    labelParts.push('Heating');
+                }
+            });
+        }
+
+        // Handle subpanels
+        if (circuitsByType.subpanel) {
+            circuitsByType.subpanel.forEach(circuit => {
+                if (circuit.notes && circuit.notes.trim()) {
+                    labelParts.push(circuit.notes.trim());
+                } else {
+                    labelParts.push('Subpanel');
+                }
+            });
+        }
+
+        // Handle outlets and lighting with smart merging
+        const typeGroups = {};
+        
+        // Group outlets and lighting by type, collecting all rooms
+        ['outlet', 'lighting'].forEach(type => {
+            if (circuitsByType[type]) {
+                const rooms = circuitsByType[type].map(circuit => 
+                    circuit.room && circuit.room.trim() ? circuit.room.trim() : 'General'
+                );
+                const uniqueRooms = [...new Set(rooms)];
+                
+                if (uniqueRooms.length > 0) {
+                    typeGroups[type] = uniqueRooms;
+                }
+            }
+        });
+
+        // Generate smart labels for outlets and lighting
+        Object.entries(typeGroups).forEach(([type, rooms]) => {
+            const typeName = type === 'outlet' ? 'outlets' : 'lights';
+            
+            if (rooms.length === 1) {
+                // Single room
+                const room = rooms[0];
+                labelParts.push(room === 'General' ? typeName : `${room} ${typeName}`);
+            } else if (rooms.length <= 3) {
+                // Few rooms - list them
+                const roomList = rooms.filter(r => r !== 'General').join(' and ');
+                const generalRooms = rooms.includes('General');
+                
+                if (generalRooms && roomList) {
+                    labelParts.push(`${roomList} and general ${typeName}`);
+                } else if (roomList) {
+                    labelParts.push(`${roomList} ${typeName}`);
+                } else {
+                    labelParts.push(typeName);
+                }
+            } else {
+                // Many rooms - use count
+                const generalCount = rooms.includes('General') ? 1 : 0;
+                const regularRooms = rooms.filter(r => r !== 'General');
+                const totalRooms = regularRooms.length + generalCount;
+                
+                if (generalCount > 0) {
+                    labelParts.push(`${totalRooms} room ${typeName}`);
+                } else {
+                    labelParts.push(`${totalRooms} room ${typeName}`);
+                }
+            }
+        });
+
+        // Handle any other types
+        Object.entries(circuitsByType).forEach(([type, circuits]) => {
+            if (!['appliance', 'heating', 'subpanel', 'outlet', 'lighting'].includes(type)) {
+                circuits.forEach(circuit => {
+                    if (circuit.notes && circuit.notes.trim()) {
+                        labelParts.push(circuit.notes.trim());
+                    } else if (circuit.room && circuit.room.trim()) {
+                        labelParts.push(`${circuit.room} ${type}`);
+                    } else {
+                        labelParts.push(type);
+                    }
+                });
+            }
+        });
+
+        return labelParts.length > 0 ? labelParts.join(', ') : '';
     }
 
     updateAmperageDisplay(breakerElement, breaker) {
@@ -176,23 +397,33 @@ class PanelRenderer {
         if (breaker.critical) {
             const criticalIndicator = document.createElement('div');
             criticalIndicator.className = 'indicator critical';
-            criticalIndicator.title = 'Critical Circuit';
+            criticalIndicator.title = window.i18n.t('breakers.criticalCircuit');
             indicators.appendChild(criticalIndicator);
         }
         
         if (breaker.monitor) {
             const monitorIndicator = document.createElement('div');
             monitorIndicator.className = 'indicator monitor';
-            monitorIndicator.title = 'Should Monitor';
+            monitorIndicator.title = window.i18n.t('breakers.shouldMonitor');
             indicators.appendChild(monitorIndicator);
+        }
+        
+        if (breaker.confirmed) {
+            const confirmedIndicator = document.createElement('div');
+            confirmedIndicator.className = 'indicator confirmed';
+            confirmedIndicator.title = window.i18n.t('breakers.testedConfirmed');
+            indicators.appendChild(confirmedIndicator);
         }
     }
 
-    async openBreakerModal(position) {
+    async openBreakerModal(position, slot = 'single') {
         try {
+            // For existing tandem breakers, get the specific slot
+            const queryParams = slot !== 'single' ? `?slot_position=${slot}` : '';
             this.app.currentBreaker = await this.app.api.getBreakerByPosition(
                 this.app.currentPanel.id, 
-                position
+                position,
+                queryParams
             );
             
             if (!this.app.currentBreaker) {
@@ -200,10 +431,12 @@ class PanelRenderer {
                     panel_id: this.app.currentPanel.id,
                     position: position,
                     label: '',
-                    amperage: 15,
+                    amperage: null,
                     critical: false,
                     monitor: false,
-                    double_pole: false
+                    confirmed: false,
+                    breaker_type: slot !== 'single' ? 'tandem' : 'single',
+                    slot_position: slot
                 };
             }
 
@@ -220,10 +453,35 @@ class PanelRenderer {
         const breaker = this.app.currentBreaker;
         
         this.setFormValue('breaker-label', breaker.label || '');
-        this.setFormValue('breaker-amperage', breaker.amperage || 15);
+        this.setFormValue('breaker-amperage', breaker.amperage || '');
         this.setFormValue('breaker-critical', breaker.critical || false);
         this.setFormValue('breaker-monitor', breaker.monitor || false);
-        this.setFormValue('breaker-double-pole', breaker.double_pole || false);
+        this.setFormValue('breaker-confirmed', breaker.confirmed || false);
+        
+        // Set breaker type - convert from legacy boolean fields if needed
+        let breakerType = breaker.breaker_type || 'single';
+        if (!breaker.breaker_type) {
+            if (breaker.double_pole) breakerType = 'double_pole';
+            else if (breaker.tandem) breakerType = 'tandem';
+        }
+        this.setFormValue('breaker-type', breakerType);
+        // Disable breaker type dropdown for tandem B slots (only A slot can control type)
+        const breakerTypeSelect = document.getElementById('breaker-type');
+        if (breakerTypeSelect) {
+            const isTandemB = (breakerType === 'tandem' || breaker.tandem) && breaker.slot_position === 'B';
+            breakerTypeSelect.disabled = isTandemB;
+            
+            // Add visual indication for disabled state
+            if (isTandemB) {
+                breakerTypeSelect.style.opacity = '0.6';
+                breakerTypeSelect.style.cursor = 'not-allowed';
+                breakerTypeSelect.title = window.i18n.t('breakers.tandemBDisabled');
+            } else {
+                breakerTypeSelect.style.opacity = '';
+                breakerTypeSelect.style.cursor = '';
+                breakerTypeSelect.title = '';
+            }
+        }
     }
 
     setFormValue(id, value) {
@@ -277,37 +535,40 @@ class PanelRenderer {
     generateCircuitFormHTML(circuitData) {
         return `
             <div class="circuit-header">
-                <div class="circuit-title">Circuit ${this.app.circuitCounter}</div>
-                <button type="button" class="remove-circuit">Remove</button>
+                <div class="circuit-title">${window.i18n.t('circuits.circuitNumber')} ${this.app.circuitCounter}</div>
+                <button type="button" class="remove-circuit">${window.i18n.t('circuits.removeCircuit')}</button>
             </div>
             <div class="circuit-form">
                 <div class="form-group">
-                    <label>Room:</label>
-                    <input type="text" name="room" value="${circuitData?.room || ''}" placeholder="e.g., Kitchen">
+                    <label>${window.i18n.t('circuits.room')}</label>
+                    <select name="room">
+                        <option value="">${window.i18n.t('circuits.selectRoom')}</option>
+                        ${this.generateRoomOptions(circuitData?.room_id)}
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label>Type:</label>
+                    <label>${window.i18n.t('circuits.type')}</label>
                     <select name="type">
-                        <option value="outlet" ${!circuitData?.type || circuitData?.type === 'outlet' ? 'selected' : ''}>Outlet</option>
-                        <option value="lighting" ${circuitData?.type === 'lighting' ? 'selected' : ''}>Lighting</option>
-                        <option value="heating" ${circuitData?.type === 'heating' ? 'selected' : ''}>Heating</option>
-                        <option value="appliance" ${circuitData?.type === 'appliance' ? 'selected' : ''}>Appliance</option>
-                        <option value="subpanel" ${circuitData?.type === 'subpanel' ? 'selected' : ''}>Subpanel</option>
+                        <option value="outlet" ${!circuitData?.type || circuitData?.type === 'outlet' ? 'selected' : ''}>${window.i18n.t('circuits.types.outlet')}</option>
+                        <option value="lighting" ${circuitData?.type === 'lighting' ? 'selected' : ''}>${window.i18n.t('circuits.types.lighting')}</option>
+                        <option value="heating" ${circuitData?.type === 'heating' ? 'selected' : ''}>${window.i18n.t('circuits.types.heating')}</option>
+                        <option value="appliance" ${circuitData?.type === 'appliance' ? 'selected' : ''}>${window.i18n.t('circuits.types.appliance')}</option>
+                        <option value="subpanel" ${circuitData?.type === 'subpanel' ? 'selected' : ''}>${window.i18n.t('circuits.types.subpanel')}</option>
                     </select>
                 </div>
                 <div class="form-group subpanel-selector" style="display: ${circuitData?.type === 'subpanel' ? 'block' : 'none'};">
-                    <label>Linked Panel:</label>
+                    <label>${window.i18n.t('circuits.linkedPanel')}</label>
                     <div class="subpanel-controls">
                         <select name="subpanel">
-                            <option value="">Select Panel...</option>
+                            <option value="">${window.i18n.t('circuits.selectPanel')}</option>
                             ${this.generateSubpanelOptions(circuitData?.subpanel_id)}
                         </select>
-                        ${circuitData?.subpanel_id ? `<button type="button" class="goto-panel" data-panel-id="${circuitData.subpanel_id}">Go to Panel</button>` : ''}
+                        ${circuitData?.subpanel_id ? `<button type="button" class="goto-panel" data-panel-id="${circuitData.subpanel_id}">${window.i18n.t('circuits.goToPanel')}</button>` : ''}
                     </div>
                 </div>
                 <div class="form-group circuit-notes">
-                    <label>Notes:</label>
-                    <textarea name="notes" placeholder="Additional notes...">${circuitData?.notes || ''}</textarea>
+                    <label>${window.i18n.t('circuits.notes')}</label>
+                    <textarea name="notes" placeholder="${window.i18n.t('circuits.additionalNotes')}">${circuitData?.notes || ''}</textarea>
                 </div>
             </div>
         `;
@@ -359,13 +620,28 @@ class PanelRenderer {
             .join('');
     }
 
-    toggleDoublePole(e) {
-        const isDoublePole = e.target.checked;
+    generateRoomOptions(selectedId = null) {
+        const levelColors = {
+            basement: '🔵',
+            main: '🟢', 
+            upper: '🟠',
+            outside: '⚫'
+        };
+
+        return this.app.allRooms
+            .map(room => 
+                `<option value="${room.id}" ${selectedId == room.id ? 'selected' : ''}>${levelColors[room.level]} ${room.name}</option>`
+            )
+            .join('');
+    }
+
+    toggleBreakerType(e) {
+        const breakerType = e.target.value;
         const position = this.app.currentBreaker.position;
         
-        if (isDoublePole && position > this.app.currentPanel.size - 2) {
-            alert('Cannot create double pole breaker - not enough space below');
-            e.target.checked = false;
+        if (breakerType === 'double_pole' && position > this.app.currentPanel.size - 2) {
+            alert(window.i18n.t('breakers.cannotCreateDoublePole'));
+            e.target.value = 'single';
             return;
         }
     }
@@ -376,12 +652,17 @@ class PanelRenderer {
         try {
             const formData = new FormData(e.target);
             
+            const amperage = formData.get('amperage');
+            const breakerType = formData.get('breakerType') || 'single';
+            const isTandem = breakerType === 'tandem';
             const breakerData = {
                 label: formData.get('label'),
-                amperage: parseInt(formData.get('amperage')),
+                amperage: amperage && amperage !== '' ? parseInt(amperage) : null,
                 critical: formData.get('critical') === 'on',
                 monitor: formData.get('monitor') === 'on',
-                double_pole: formData.get('doublePole') === 'on'
+                confirmed: formData.get('confirmed') === 'on',
+                breaker_type: breakerType,
+                slot_position: isTandem ? 'A' : 'single'
             };
 
             if (this.app.currentBreaker.id) {
@@ -396,7 +677,12 @@ class PanelRenderer {
             Object.assign(this.app.currentBreaker, breakerData);
             
             await this.saveCircuits();
-            await this.updateBreakerDisplay(this.app.currentBreaker);
+            
+            // Reload all breakers at this position to handle tandem properly
+            const allBreakers = await this.app.api.getBreakersByPanel(this.app.currentPanel.id);
+            const positionBreakers = allBreakers.filter(b => b.position === this.app.currentBreaker.position);
+            await this.updatePositionDisplay(this.app.currentBreaker.position, positionBreakers);
+            
             this.closeModal();
         } catch (error) {
             this.app.handleError('Failed to save breaker', error);
@@ -410,14 +696,14 @@ class PanelRenderer {
             const circuitId = circuitElement.dataset.circuitId;
             const isNew = circuitId.startsWith('new-');
             
-            const room = circuitElement.querySelector('[name="room"]').value;
+            const room_id = circuitElement.querySelector('[name="room"]').value;
             const type = circuitElement.querySelector('[name="type"]').value;
             const notes = circuitElement.querySelector('[name="notes"]').value;
             const subpanelSelect = circuitElement.querySelector('[name="subpanel"]');
             const subpanel_id = subpanelSelect ? subpanelSelect.value : null;
             
             const circuitData = {
-                room: room || null,
+                room_id: room_id && room_id !== '' ? parseInt(room_id) : null,
                 type: type || null,
                 notes: notes || null,
                 subpanel_id: subpanel_id && subpanel_id !== '' ? parseInt(subpanel_id) : null

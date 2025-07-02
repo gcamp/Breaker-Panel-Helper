@@ -29,47 +29,83 @@ const initializeDatabase = () => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             panel_id INTEGER NOT NULL,
             position INTEGER NOT NULL CHECK(position > 0),
+            slot_position TEXT DEFAULT 'single' CHECK(slot_position IN ('single', 'A', 'B')),
             label TEXT,
             amperage INTEGER CHECK(amperage > 0 AND amperage <= 200),
             critical BOOLEAN DEFAULT 0,
             monitor BOOLEAN DEFAULT 0,
+            confirmed BOOLEAN DEFAULT 0,
+            breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
+            tandem BOOLEAN DEFAULT 0,
             double_pole BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
-            UNIQUE(panel_id, position)
+            UNIQUE(panel_id, position, slot_position)
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE CHECK(length(name) > 0),
+            level TEXT NOT NULL CHECK(level IN ('basement', 'main', 'upper', 'outside')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
         db.run(`CREATE TABLE IF NOT EXISTS circuits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             breaker_id INTEGER NOT NULL,
-            room TEXT,
+            room_id INTEGER,
             type TEXT CHECK(type IN ('outlet', 'lighting', 'heating', 'appliance', 'subpanel')),
             notes TEXT,
             subpanel_id INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (breaker_id) REFERENCES breakers (id) ON DELETE CASCADE,
+            FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
             FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
         )`);
 
-        // Migration for existing databases
-        db.all(`PRAGMA table_info(circuits)`, (err, rows) => {
+        // Migration: Add breaker_type column and migrate existing data
+        db.run(`PRAGMA table_info(breakers)`, (err, rows) => {
             if (err) {
-                console.error('Error checking circuits table structure:', err);
+                console.error('Error checking table schema:', err);
+                return;
+            }
+        });
+
+        // Check if breaker_type column exists and add if missing
+        db.all(`PRAGMA table_info(breakers)`, (err, columns) => {
+            if (err) {
+                console.error('Error checking breaker table schema:', err);
                 return;
             }
             
-            const hasSubpanelId = rows.some(row => row.name === 'subpanel_id');
-            if (!hasSubpanelId) {
-                console.log('Adding subpanel_id column to circuits table...');
-                db.run(`ALTER TABLE circuits ADD COLUMN subpanel_id INTEGER REFERENCES panels(id) ON DELETE SET NULL`, (err) => {
+            const hasBreakerkType = columns.some(col => col.name === 'breaker_type');
+            
+            if (!hasBreakerkType) {
+                console.log('Adding breaker_type column...');
+                db.run(`ALTER TABLE breakers ADD COLUMN breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem'))`, (err) => {
                     if (err) {
-                        console.error('Error adding subpanel_id column:', err);
-                    } else {
-                        console.log('Successfully added subpanel_id column');
+                        console.error('Error adding breaker_type column:', err);
+                        return;
                     }
+                    
+                    // Migrate existing data
+                    console.log('Migrating existing breaker data...');
+                    db.run(`UPDATE breakers SET breaker_type = 
+                        CASE 
+                            WHEN double_pole = 1 THEN 'double_pole'
+                            WHEN tandem = 1 THEN 'tandem'
+                            ELSE 'single'
+                        END`, (err) => {
+                        if (err) {
+                            console.error('Error migrating breaker data:', err);
+                        } else {
+                            console.log('Breaker data migration completed');
+                        }
+                    });
                 });
             }
         });
+
     });
 };
 
@@ -187,17 +223,24 @@ app.get('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
 app.get('/api/panels/:panelId/breakers/position/:position', asyncHandler(async (req, res) => {
     const panelId = parseInt(req.params.panelId);
     const position = parseInt(req.params.position);
+    const slotPosition = req.query.slot_position || 'single';
     
     if (isNaN(panelId) || isNaN(position) || panelId <= 0 || position <= 0) {
         return res.status(400).json({ error: 'Invalid panel ID or position' });
     }
 
-    const breaker = await dbGet('SELECT * FROM breakers WHERE panel_id = ? AND position = ?', [panelId, position]);
-    res.json(breaker || null);
+    // For tandem breakers, we might need to get both A and B breakers
+    if (slotPosition === 'both') {
+        const breakers = await dbAll('SELECT * FROM breakers WHERE panel_id = ? AND position = ? ORDER BY slot_position', [panelId, position]);
+        res.json(breakers || []);
+    } else {
+        const breaker = await dbGet('SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', [panelId, position, slotPosition]);
+        res.json(breaker || null);
+    }
 }));
 
 app.post('/api/breakers', asyncHandler(async (req, res) => {
-    const { panel_id, position, label, amperage, critical, monitor, double_pole } = req.body;
+    const { panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, double_pole, tandem, slot_position } = req.body;
     
     // Validation
     if (!panel_id || typeof panel_id !== 'number' || panel_id <= 0) {
@@ -206,8 +249,27 @@ app.post('/api/breakers', asyncHandler(async (req, res) => {
     if (!position || typeof position !== 'number' || position <= 0) {
         return res.status(400).json({ error: 'Valid position is required' });
     }
-    if (amperage && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
+    if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
         return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
+    }
+    if (slot_position && !['single', 'A', 'B'].includes(slot_position)) {
+        return res.status(400).json({ error: 'Slot position must be one of: single, A, B' });
+    }
+    if (breaker_type && !['single', 'double_pole', 'tandem'].includes(breaker_type)) {
+        return res.status(400).json({ error: 'Breaker type must be one of: single, double_pole, tandem' });
+    }
+
+    // Determine breaker type from input (support both new and legacy formats)
+    let finalBreakerType = breaker_type || 'single';
+    if (!breaker_type) {
+        if (double_pole) finalBreakerType = 'double_pole';
+        else if (tandem) finalBreakerType = 'tandem';
+    }
+
+    // For tandem breakers, ensure slot_position is set appropriately
+    let finalSlotPosition = slot_position || 'single';
+    if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
+        finalSlotPosition = 'A'; // Default to A for tandem breakers
     }
 
     const breakerData = {
@@ -217,32 +279,54 @@ app.post('/api/breakers', asyncHandler(async (req, res) => {
         amperage: amperage || null,
         critical: Boolean(critical),
         monitor: Boolean(monitor),
-        double_pole: Boolean(double_pole)
+        confirmed: Boolean(confirmed),
+        breaker_type: finalBreakerType,
+        slot_position: finalSlotPosition
     };
 
     try {
         const result = await dbRun(
-            `INSERT INTO breakers (panel_id, position, label, amperage, critical, monitor, double_pole) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO breakers (panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, slot_position) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [breakerData.panel_id, breakerData.position, breakerData.label, breakerData.amperage, 
-             breakerData.critical, breakerData.monitor, breakerData.double_pole]
+             breakerData.critical, breakerData.monitor, breakerData.confirmed, breakerData.breaker_type,
+             breakerData.slot_position]
         );
         
         res.status(201).json({ id: result.id, ...breakerData });
     } catch (error) {
         if (error.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'A breaker already exists at this position' });
+            return res.status(409).json({ error: 'A breaker already exists at this position and slot' });
         }
         throw error;
     }
 }));
 
 app.put('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
-    const { label, amperage, critical, monitor, double_pole } = req.body;
+    const { label, amperage, critical, monitor, confirmed, breaker_type, double_pole, tandem, slot_position } = req.body;
     
     // Validation
-    if (amperage && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
+    if (amperage !== null && amperage !== undefined && (typeof amperage !== 'number' || amperage <= 0 || amperage > 200)) {
         return res.status(400).json({ error: 'Amperage must be between 1 and 200' });
+    }
+    if (slot_position && !['single', 'A', 'B'].includes(slot_position)) {
+        return res.status(400).json({ error: 'Slot position must be one of: single, A, B' });
+    }
+    if (breaker_type && !['single', 'double_pole', 'tandem'].includes(breaker_type)) {
+        return res.status(400).json({ error: 'Breaker type must be one of: single, double_pole, tandem' });
+    }
+
+    // Determine breaker type from input (support both new and legacy formats)
+    let finalBreakerType = breaker_type || 'single';
+    if (!breaker_type) {
+        if (double_pole) finalBreakerType = 'double_pole';
+        else if (tandem) finalBreakerType = 'tandem';
+    }
+
+    // For tandem breakers, ensure slot_position is set appropriately
+    let finalSlotPosition = slot_position || 'single';
+    if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
+        finalSlotPosition = 'A'; // Default to A for tandem breakers
     }
 
     const breakerData = {
@@ -250,13 +334,15 @@ app.put('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
         amperage: amperage || null,
         critical: Boolean(critical),
         monitor: Boolean(monitor),
-        double_pole: Boolean(double_pole)
+        confirmed: Boolean(confirmed),
+        breaker_type: finalBreakerType,
+        slot_position: finalSlotPosition
     };
 
     const result = await dbRun(
-        `UPDATE breakers SET label = ?, amperage = ?, critical = ?, monitor = ?, double_pole = ? WHERE id = ?`,
+        `UPDATE breakers SET label = ?, amperage = ?, critical = ?, monitor = ?, confirmed = ?, breaker_type = ?, slot_position = ? WHERE id = ?`,
         [breakerData.label, breakerData.amperage, breakerData.critical, breakerData.monitor, 
-         breakerData.double_pole, req.params.id]
+         breakerData.confirmed, breakerData.breaker_type, breakerData.slot_position, req.params.id]
     );
 
     if (result.changes === 0) {
@@ -273,19 +359,101 @@ app.delete('/api/breakers/:id', validateId(), asyncHandler(async (req, res) => {
     res.json({ message: 'Breaker deleted successfully' });
 }));
 
+// Room routes
+app.get('/api/rooms', asyncHandler(async (req, res) => {
+    const rooms = await dbAll(`
+        SELECT * FROM rooms 
+        ORDER BY 
+            CASE level 
+                WHEN 'upper' THEN 1 
+                WHEN 'main' THEN 2 
+                WHEN 'basement' THEN 3 
+                WHEN 'outside' THEN 4 
+            END, 
+            name
+    `);
+    res.json(rooms);
+}));
+
+app.post('/api/rooms', asyncHandler(async (req, res) => {
+    const { name, level } = req.body;
+    
+    // Validation
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Room name is required and must be a non-empty string' });
+    }
+    if (!level || !['basement', 'main', 'upper', 'outside'].includes(level)) {
+        return res.status(400).json({ error: 'Level must be one of: basement, main, upper, outside' });
+    }
+
+    try {
+        const result = await dbRun('INSERT INTO rooms (name, level) VALUES (?, ?)', [name.trim(), level]);
+        res.status(201).json({ id: result.id, name: name.trim(), level });
+    } catch (error) {
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: 'A room with this name already exists' });
+        }
+        throw error;
+    }
+}));
+
+app.put('/api/rooms/:id', validateId(), asyncHandler(async (req, res) => {
+    const { name, level } = req.body;
+    
+    // Validation
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Room name is required and must be a non-empty string' });
+    }
+    if (!level || !['basement', 'main', 'upper', 'outside'].includes(level)) {
+        return res.status(400).json({ error: 'Level must be one of: basement, main, upper, outside' });
+    }
+
+    try {
+        const result = await dbRun('UPDATE rooms SET name = ?, level = ? WHERE id = ?', [name.trim(), level, req.params.id]);
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+        res.json({ id: req.params.id, name: name.trim(), level });
+    } catch (error) {
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: 'A room with this name already exists' });
+        }
+        throw error;
+    }
+}));
+
+app.delete('/api/rooms/:id', validateId(), asyncHandler(async (req, res) => {
+    const result = await dbRun('DELETE FROM rooms WHERE id = ?', [req.params.id]);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'Room not found' });
+    }
+    res.json({ message: 'Room deleted successfully' });
+}));
+
 // Circuit routes
 app.get('/api/circuits', asyncHandler(async (req, res) => {
-    const circuits = await dbAll('SELECT * FROM circuits ORDER BY created_at');
+    const circuits = await dbAll(`
+        SELECT c.*, r.name as room_name, r.level as room_level 
+        FROM circuits c 
+        LEFT JOIN rooms r ON c.room_id = r.id 
+        ORDER BY c.created_at
+    `);
     res.json(circuits);
 }));
 
 app.get('/api/breakers/:breakerId/circuits', validateId('breakerId'), asyncHandler(async (req, res) => {
-    const circuits = await dbAll('SELECT * FROM circuits WHERE breaker_id = ? ORDER BY created_at', [req.params.breakerId]);
+    const circuits = await dbAll(`
+        SELECT c.*, r.name as room_name, r.level as room_level 
+        FROM circuits c 
+        LEFT JOIN rooms r ON c.room_id = r.id 
+        WHERE c.breaker_id = ? 
+        ORDER BY c.created_at
+    `, [req.params.breakerId]);
     res.json(circuits);
 }));
 
 app.post('/api/circuits', asyncHandler(async (req, res) => {
-    const { breaker_id, room, type, notes, subpanel_id } = req.body;
+    const { breaker_id, room_id, type, notes, subpanel_id } = req.body;
     
     // Validation
     if (!breaker_id || typeof breaker_id !== 'number' || breaker_id <= 0) {
@@ -297,28 +465,32 @@ app.post('/api/circuits', asyncHandler(async (req, res) => {
         return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` });
     }
 
+    if (room_id && (typeof room_id !== 'number' || room_id <= 0)) {
+        return res.status(400).json({ error: 'Room ID must be a valid positive number' });
+    }
+
     if (subpanel_id && (typeof subpanel_id !== 'number' || subpanel_id <= 0)) {
         return res.status(400).json({ error: 'Subpanel ID must be a valid positive number' });
     }
 
     const circuitData = {
         breaker_id,
-        room: room?.trim() || null,
+        room_id: room_id || null,
         type: type || null,
         notes: notes?.trim() || null,
         subpanel_id: subpanel_id || null
     };
 
     const result = await dbRun(
-        `INSERT INTO circuits (breaker_id, room, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)`,
-        [circuitData.breaker_id, circuitData.room, circuitData.type, circuitData.notes, circuitData.subpanel_id]
+        `INSERT INTO circuits (breaker_id, room_id, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)`,
+        [circuitData.breaker_id, circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id]
     );
 
     res.status(201).json({ id: result.id, ...circuitData });
 }));
 
 app.put('/api/circuits/:id', validateId(), asyncHandler(async (req, res) => {
-    const { room, type, notes, subpanel_id } = req.body;
+    const { room_id, type, notes, subpanel_id } = req.body;
     
     // Validation
     const validTypes = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
@@ -326,20 +498,24 @@ app.put('/api/circuits/:id', validateId(), asyncHandler(async (req, res) => {
         return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` });
     }
 
+    if (room_id && (typeof room_id !== 'number' || room_id <= 0)) {
+        return res.status(400).json({ error: 'Room ID must be a valid positive number' });
+    }
+
     if (subpanel_id && (typeof subpanel_id !== 'number' || subpanel_id <= 0)) {
         return res.status(400).json({ error: 'Subpanel ID must be a valid positive number' });
     }
 
     const circuitData = {
-        room: room?.trim() || null,
+        room_id: room_id || null,
         type: type || null,
         notes: notes?.trim() || null,
         subpanel_id: subpanel_id || null
     };
 
     const result = await dbRun(
-        `UPDATE circuits SET room = ?, type = ?, notes = ?, subpanel_id = ? WHERE id = ?`,
-        [circuitData.room, circuitData.type, circuitData.notes, circuitData.subpanel_id, req.params.id]
+        `UPDATE circuits SET room_id = ?, type = ?, notes = ?, subpanel_id = ? WHERE id = ?`,
+        [circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id, req.params.id]
     );
 
     if (result.changes === 0) {

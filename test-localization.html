@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Localization Test</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #2c3e50;
+            --border-color: #e9ecef;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --border-color: #404040;
+        }
+        
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 10px; 
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .language-selector-container, .system-theme-info { 
+            margin: 10px 0; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .system-theme-info {
+            font-style: italic;
+            color: var(--text-primary);
+            opacity: 0.7;
+        }
+        button { margin: 5px; padding: 5px 10px; }
+        
+        /* Breaker Demo Styles */
+        .breaker-demo {
+            width: 120px;
+            height: 70px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .breaker-demo.occupied {
+            border-color: #3498db;
+        }
+        
+        .breaker-demo:not(.occupied) .breaker-number::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 120%;
+            height: 2px;
+            background-color: var(--text-primary);
+            transform: translate(-50%, -50%) rotate(45deg);
+            opacity: 0.6;
+        }
+        
+        .breaker-number {
+            position: relative;
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        .breaker-label {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Localization Framework Test</h1>
+    
+    <div class="language-selector-container">
+        <label for="language-selector" data-i18n="language.title">Language:</label>
+        <select id="language-selector">
+            <option value="en" data-i18n="language.english">English</option>
+            <option value="fr" data-i18n="language.french">Français</option>
+        </select>
+    </div>
+    
+    <div class="system-theme-info">
+        <p>🌙 Dark mode follows your system settings</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>App Labels</h2>
+        <p data-i18n="app.title">Breaker Panel Helper</p>
+        <button data-i18n="app.save">Save</button>
+        <button data-i18n="app.cancel">Cancel</button>
+        <button data-i18n="app.delete">Delete</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Panel Management</h2>
+        <p><span data-i18n="panels.currentPanel">Current Panel:</span> Main Panel</p>
+        <button data-i18n="panels.newPanel">New Panel</button>
+        <button data-i18n="panels.deletePanel">Delete Panel</button>
+        <button data-i18n="panels.manageRooms">Manage Rooms</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Breaker Management</h2>
+        <label data-i18n="breakers.breakerLabel">Label:</label>
+        <input type="text" data-i18n-placeholder="circuits.additionalNotes" placeholder="Additional notes...">
+        <br>
+        <label><input type="checkbox"> <span data-i18n="breakers.criticalCircuit">🔋 Critical Circuit</span></label>
+        <br>
+        <label><input type="checkbox"> <span data-i18n="breakers.shouldMonitor">📈 Should Monitor</span></label>
+    </div>
+    
+    <div class="test-section">
+        <h2>Circuit Types</h2>
+        <select>
+            <option data-i18n="circuits.types.outlet">🔵 Outlet</option>
+            <option data-i18n="circuits.types.lighting">🟠 Lighting</option>
+            <option data-i18n="circuits.types.heating">🔴 Heating</option>
+            <option data-i18n="circuits.types.appliance">🟢 Appliance</option>
+            <option data-i18n="circuits.types.subpanel">🟣 Subpanel</option>
+        </select>
+    </div>
+    
+    <div class="test-section">
+        <h2>Room Levels</h2>
+        <select>
+            <option data-i18n="rooms.upperLevel">🟠 Upper Level</option>
+            <option data-i18n="rooms.mainLevel">🟢 Main Level</option>
+            <option data-i18n="rooms.basement">🔵 Basement</option>
+        </select>
+    </div>
+    
+    <div class="test-section">
+        <h2>Dynamic Content Test</h2>
+        <p id="dynamic-test"></p>
+        <button onclick="testDynamicTranslation()">Test Dynamic Translation</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Breaker Visual Test</h2>
+        <p>Empty breaker (should show diagonal line):</p>
+        <div class="breaker-demo empty">
+            <span class="breaker-number">15</span>
+        </div>
+        
+        <p>Occupied breaker (no diagonal line):</p>
+        <div class="breaker-demo occupied">
+            <span class="breaker-number">17</span>
+            <span class="breaker-label">Kitchen Outlets</span>
+        </div>
+    </div>
+    
+    <script src="public/i18n.js"></script>
+    <script>
+        function testDynamicTranslation() {
+            const elem = document.getElementById('dynamic-test');
+            const panelName = 'Test Panel';
+            elem.textContent = window.i18n.t('print.title', { panelName });
+        }
+        
+        // Test language switching
+        document.getElementById('language-selector').addEventListener('change', (e) => {
+            window.i18n.setLanguage(e.target.value);
+        });
+    </script>
+</body>
+</html>

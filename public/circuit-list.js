@@ -59,7 +59,7 @@ class CircuitListManager {
             .filter(room => room && room.trim() !== '')
         )].sort();
         
-        roomFilter.innerHTML = '<option value="">All Rooms</option>';
+        roomFilter.innerHTML = `<option value="">${window.i18n.t('circuitList.allRooms')}</option>`;
         
         rooms.forEach(room => {
             const option = document.createElement('option');
@@ -86,7 +86,8 @@ class CircuitListManager {
             room: this.getElementValue('room-filter', ''),
             type: this.getElementValue('type-filter', ''),
             critical: this.getElementChecked('critical-filter'),
-            monitor: this.getElementChecked('monitor-filter')
+            monitor: this.getElementChecked('monitor-filter'),
+            notConfirmed: this.getElementChecked('not-confirmed-filter')
         };
     }
 
@@ -136,6 +137,10 @@ class CircuitListManager {
                 return false;
             }
             
+            if (filters.notConfirmed && breaker.confirmed) {
+                return false;
+            }
+            
             return true;
         });
     }
@@ -167,12 +172,12 @@ class CircuitListManager {
 
     showNoCircuitsMessage(tableBody) {
         const message = this.app.allCircuitData.length === 0 
-            ? 'No circuits configured for this panel.'
-            : 'No circuits match the current filters.';
+            ? window.i18n.t('circuitList.noCircuits')
+            : window.i18n.t('circuitList.noMatchingCircuits');
         
         tableBody.innerHTML = `
             <tr>
-                <td colspan="8" class="no-circuits-message">
+                <td colspan="6" class="no-circuits-message">
                     ${message}
                 </td>
             </tr>
@@ -181,11 +186,21 @@ class CircuitListManager {
 
     createCircuitRow(circuit, breaker) {
         const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        row.dataset.breakerId = breaker.id;
+        row.dataset.circuitId = circuit.id;
+        row.dataset.breakerPosition = breaker.position;
+        row.title = window.i18n.t('circuitList.clickToEdit');
         
-        // Breaker number with double pole indicator
-        var breakerNumberHtml = breaker.double_pole 
-            ? `${breaker.position}-${breaker.position + 2}<span class="double-pole-indicator">2P</span>`
-            : breaker.position;
+        // Breaker number with double pole and tandem indicators
+        var breakerNumberHtml;
+        if (breaker.double_pole) {
+            breakerNumberHtml = `${breaker.position}-${breaker.position + 2}<span class="double-pole-indicator">2P</span>`;
+        } else if (breaker.tandem) {
+            breakerNumberHtml = `${breaker.position}${breaker.slot_position}<span class="tandem-indicator">T</span>`;
+        } else {
+            breakerNumberHtml = breaker.position;
+        }
         if (breaker.label) {
             breakerNumberHtml += `<span class="breaker-label"> — ${breaker.label}</span>`;
         }
@@ -197,23 +212,43 @@ class CircuitListManager {
         
         // Flags
         const flags = [];
-        if (breaker.critical) flags.push('<span class="flag-badge flag-critical">CRITICAL</span>');
-        if (breaker.monitor) flags.push('<span class="flag-badge flag-monitor">MONITOR</span>');
+        if (breaker.critical) flags.push(`<span class="flag-badge flag-critical">${window.i18n.t('circuitList.flagCritical')}</span>`);
+        if (breaker.monitor) flags.push(`<span class="flag-badge flag-monitor">${window.i18n.t('circuitList.flagMonitor')}</span>`);
+        if (breaker.confirmed) flags.push(`<span class="flag-badge flag-confirmed">${window.i18n.t('circuitList.flagConfirmed')}</span>`);
         const flagsHtml = flags.length > 0 ? `<div class="flags-cell">${flags.join('')}</div>` : '';
         
         row.innerHTML = `
-            <td class="breaker-number-cell">${breakerNumberHtml}</td>
-            <td class="amperage-cell">${breaker.amperage ? breaker.amperage + 'A' : '-'}</td>
-            <td>${circuit.room || '-'}</td>
-            <td>${circuitTypeHtml}</td>
-            <td>${circuit.notes || '-'}</td>
-            <td>${flagsHtml}</td>
+            <td class="breaker-number-cell" data-label="${window.i18n.t('circuitList.headers.breaker')}">${breakerNumberHtml}</td>
+            <td class="amperage-cell" data-label="${window.i18n.t('circuitList.headers.amps')}">${breaker.amperage ? breaker.amperage + 'A' : '-'}</td>
+            <td data-label="${window.i18n.t('circuitList.headers.room')}">${circuit.room || '-'}</td>
+            <td data-label="${window.i18n.t('circuitList.headers.type')}">${circuitTypeHtml}</td>
+            <td data-label="${window.i18n.t('circuitList.headers.notes')}">${circuit.notes || '-'}</td>
+            <td data-label="${window.i18n.t('circuitList.headers.flags')}">${flagsHtml}</td>
         `;
         
         return row;
     }
 
     bindCircuitRowEvents(tableBody) {
+        // Handle circuit row clicks to open breaker modal
+        tableBody.querySelectorAll('tr[data-circuit-id]').forEach(row => {
+            row.addEventListener('click', async (e) => {
+                // Don't trigger if clicking on a link or button
+                if (e.target.closest('a, button')) return;
+                
+                const breakerPosition = parseInt(row.dataset.breakerPosition);
+                const circuitId = parseInt(row.dataset.circuitId);
+                
+                // Open breaker modal without changing display mode
+                await this.app.openBreakerModal(breakerPosition);
+                
+                // Scroll to the specific circuit after modal opens
+                setTimeout(() => {
+                    this.scrollToCircuit(circuitId);
+                }, 100);
+            });
+        });
+        
         // Handle linked panel navigation
         tableBody.querySelectorAll('.linked-panel-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -224,6 +259,42 @@ class CircuitListManager {
             });
         });
     }
+    
+    scrollToCircuit(circuitId) {
+        // Look for the circuit element within the modal
+        const modal = document.getElementById('breaker-modal');
+        if (!modal) return;
+        
+        const circuitElement = modal.querySelector(`[data-circuit-id="${circuitId}"]`);
+        if (circuitElement) {
+            // Get the modal content container for scrolling
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                // Calculate the position of the circuit element relative to the modal
+                const circuitRect = circuitElement.getBoundingClientRect();
+                const modalRect = modalContent.getBoundingClientRect();
+                const scrollTop = modalContent.scrollTop;
+                
+                // Calculate the target scroll position to center the circuit
+                const targetScroll = scrollTop + (circuitRect.top - modalRect.top) - (modalContent.clientHeight / 2) + (circuitElement.offsetHeight / 2);
+                
+                // Smooth scroll within the modal
+                modalContent.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: 'smooth'
+                });
+            }
+            
+            // Add a subtle highlight effect using CSS variable
+            const highlightColor = getComputedStyle(document.documentElement).getPropertyValue('--table-row-highlight').trim();
+            circuitElement.style.backgroundColor = highlightColor;
+            circuitElement.style.transition = 'background-color 0.3s ease';
+            
+            setTimeout(() => {
+                circuitElement.style.backgroundColor = '';
+            }, 2000);
+        }
+    }
 
     clearCircuitFilters() {
         this.setElementValue('circuit-search', '');
@@ -231,6 +302,7 @@ class CircuitListManager {
         this.setElementValue('type-filter', '');
         this.setElementChecked('critical-filter', false);
         this.setElementChecked('monitor-filter', false);
+        this.setElementChecked('not-confirmed-filter', false);
         
         this.resetSortHeaders();
         this.sortCircuitData();

@@ -1,0 +1,200 @@
+{
+    "app": {
+        "title": "Assistant Panneau Électrique",
+        "loading": "Chargement...",
+        "error": "Erreur",
+        "success": "Succès",
+        "confirm": "Confirmer",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "add": "Ajouter",
+        "remove": "Retirer",
+        "close": "Fermer",
+        "yes": "Oui",
+        "no": "Non",
+        "ok": "OK"
+    },
+    
+    "panels": {
+        "title": "Panneaux Électriques",
+        "currentPanel": "Panneau Actuel :",
+        "newPanel": "Nouveau Panneau",
+        "deletePanel": "Supprimer le Panneau",
+        "manageRooms": "Gérer les Pièces",
+        "createPanel": "Créer un Nouveau Panneau",
+        "updatePanel": "Mettre à Jour le Panneau",
+        "panelName": "Nom du Panneau :",
+        "panelSize": "Taille du Panneau :",
+        "spaces": "Espaces",
+        "mainPanel": "Panneau Principal",
+        "subpanel": "Sous-panneau",
+        "deletePanelConfirm": "Êtes-vous sûr de vouloir supprimer ce panneau ? Cela supprimera également tous les disjoncteurs et circuits.",
+        "panelCreated": "Panneau créé avec succès",
+        "panelUpdated": "Panneau mis à jour avec succès",
+        "panelDeleted": "Panneau supprimé avec succès"
+    },
+    
+    "breakers": {
+        "editBreaker": "Modifier le Disjoncteur",
+        "breakerLabel": "Étiquette :",
+        "amperage": "Ampérage :",
+        "criticalCircuit": "🔋 Circuit Critique",
+        "shouldMonitor": "📈 À Surveiller",
+        "testedConfirmed": "✅ Testé et Confirmé",
+        "breakerType": "Type de Disjoncteur :",
+        "singleBreaker": "Disjoncteur Simple",
+        "doublePoleBreaker": "Disjoncteur Bipolaire",
+        "tandemBreaker": "Disjoncteur Tandem (A+B dans le même slot)",
+        "tandemBDisabled": "Option tandem contrôlée par le slot A",
+        "slotPosition": "Position du Slot :",
+        "slotA": "A (Gauche/Haut)",
+        "slotB": "B (Droite/Bas)",
+        "none": "Aucun",
+        "breakerSaved": "Disjoncteur enregistré avec succès",
+        "breakerDeleted": "Disjoncteur supprimé avec succès",
+        "cannotCreateDoublePole": "Impossible de créer un disjoncteur bipolaire - pas assez d'espace en dessous",
+        "breakerExists": "Un disjoncteur existe déjà à cette position et ce slot"
+    },
+    
+    "circuits": {
+        "title": "Circuits",
+        "addCircuit": "Ajouter un Circuit",
+        "removeCircuit": "Retirer",
+        "circuitNumber": "Circuit",
+        "room": "Pièce :",
+        "type": "Type :",
+        "notes": "Notes :",
+        "linkedPanel": "Panneau Lié :",
+        "selectRoom": "Sélectionner une Pièce...",
+        "selectPanel": "Sélectionner un Panneau...",
+        "goToPanel": "Aller au Panneau",
+        "additionalNotes": "Notes supplémentaires...",
+        "circuitSaved": "Circuit enregistré avec succès",
+        "circuitDeleted": "Circuit supprimé avec succès",
+        
+        "types": {
+            "outlet": "🔵 Prise",
+            "lighting": "🟠 Éclairage",
+            "heating": "🔴 Chauffage",
+            "appliance": "🟢 Appareil",
+            "subpanel": "🟣 Sous-panneau"
+        }
+    },
+    
+    "rooms": {
+        "title": "Gérer les Pièces",
+        "addNewRoom": "Ajouter une Nouvelle Pièce",
+        "existingRooms": "Pièces Existantes",
+        "roomName": "Nom de la Pièce :",
+        "level": "Niveau :",
+        "selectLevel": "Sélectionner un Niveau...",
+        "upperLevel": "🟠 Niveau Supérieur",
+        "mainLevel": "🟢 Niveau Principal",
+        "basement": "🔵 Sous-sol",
+        "outside": "⚫ Extérieur",
+        "roomCreated": "Pièce créée avec succès",
+        "roomUpdated": "Pièce mise à jour avec succès",
+        "roomDeleted": "Pièce supprimée avec succès",
+        "roomExists": "Une pièce avec ce nom existe déjà",
+        "noRooms": "Aucune pièce configurée pour l'instant",
+        "deleteRoomConfirm": "Êtes-vous sûr de vouloir supprimer \"{roomName}\" ? Cela la retirera de tous les circuits.",
+        "upperLevel": "Niveau Supérieur",
+        "mainLevel": "Niveau Principal",
+        "basement": "Sous-sol",
+        "outside": "Extérieur"
+    },
+    
+    "circuitList": {
+        "title": "Liste des Circuits",
+        "panelName": "Liste des Circuits - {panelName}",
+        "totalCircuits": "Total des Circuits :",
+        "filteredCircuits": "Filtrés :",
+        "search": "Rechercher :",
+        "searchPlaceholder": "Rechercher circuits, pièces, notes...",
+        "allRooms": "Toutes les Pièces",
+        "circuitType": "Type de Circuit :",
+        "allTypes": "Tous les Types",
+        "flags": "Indicateurs :",
+        "critical": "🔋 Critique",
+        "monitor": "📈 Surveiller",
+        "notConfirmed": "❌ Non Confirmé",
+        "clearAll": "Effacer Tout",
+        "noCircuits": "Aucun circuit configuré pour ce panneau.",
+        "noMatchingCircuits": "Aucun circuit ne correspond aux filtres actuels.",
+        "clickToEdit": "Cliquer pour modifier ce circuit",
+        
+        "headers": {
+            "breaker": "Disjoncteur #",
+            "amps": "Ampères",
+            "room": "Pièce",
+            "type": "Type",
+            "notes": "Notes",
+            "flags": "Indicateurs"
+        },
+        
+        "flagCritical": "🔋 CRITIQUE",
+        "flagMonitor": "📈 SURVEILLER",
+        "flagConfirmed": "✅ CONFIRMÉ"
+    },
+    
+    "viewModes": {
+        "title": "Mode d'Affichage :",
+        "normal": "Normal",
+        "critical": "Critique",
+        "monitor": "Surveiller"
+    },
+    
+    "displayModes": {
+        "title": "Affichage :",
+        "panelView": "Vue Panneau",
+        "circuitList": "Liste des Circuits",
+        "printPanel": "🖨️ Imprimer le Panneau"
+    },
+    
+    "validation": {
+        "required": "Ce champ est requis",
+        "invalidName": "Le nom est requis et doit être une chaîne non vide",
+        "invalidSize": "La taille doit être un nombre entre 12 et 42",
+        "invalidAmperage": "L'ampérage doit être entre 1 et 200",
+        "invalidPosition": "Une position valide est requise",
+        "invalidPanelId": "Un ID de panneau valide est requis",
+        "invalidLevel": "Le niveau doit être l'un de : basement, main, upper, outside",
+        "invalidCircuitType": "Le type de circuit doit être l'un de : outlet, lighting, heating, appliance, subpanel",
+        "invalidSlotPosition": "La position du slot doit être l'une de : single, A, B"
+    },
+    
+    "errors": {
+        "networkError": "Erreur réseau : Impossible de se connecter au serveur",
+        "loadPanels": "Échec du chargement des panneaux",
+        "loadBreakers": "Échec du chargement des disjoncteurs",
+        "loadCircuits": "Échec du chargement des circuits",
+        "loadRooms": "Échec du chargement des pièces",
+        "saveBreaker": "Échec de l'enregistrement du disjoncteur",
+        "saveCircuit": "Échec de l'enregistrement du circuit",
+        "saveRoom": "Échec de l'enregistrement de la pièce",
+        "deleteBreaker": "Échec de la suppression du disjoncteur",
+        "deleteCircuit": "Échec de la suppression du circuit",
+        "deleteRoom": "Échec de la suppression de la pièce",
+        "panelNotFound": "Panneau introuvable",
+        "breakerNotFound": "Disjoncteur introuvable",
+        "circuitNotFound": "Circuit introuvable",
+        "roomNotFound": "Pièce introuvable",
+        "applicationInit": "Échec de l'initialisation de l'application",
+        "cannotDeleteLastPanel": "Impossible de supprimer le dernier panneau"
+    },
+    
+    "print": {
+        "title": "Panneau Électrique : {panelName}",
+        "printed": "Imprimé :",
+        "noPanelSelected": "Aucun panneau sélectionné pour l'impression",
+        "panelNotAvailable": "Panneau non disponible pour l'impression"
+    },
+    
+    "language": {
+        "title": "Langue :",
+        "english": "English",
+        "french": "Français"
+    }
+}

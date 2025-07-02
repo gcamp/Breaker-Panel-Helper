@@ -119,11 +119,11 @@ class ApiClient {
         return this.request(`/breakers/${id}`);
     }
 
-    async getBreakerByPosition(panelId, position) {
+    async getBreakerByPosition(panelId, position, queryParams = '') {
         if (!this.isValidId(panelId) || !this.isValidPosition(position)) {
             throw new Error('Invalid panel ID or position');
         }
-        return this.request(`/panels/${panelId}/breakers/position/${position}`);
+        return this.request(`/panels/${panelId}/breakers/position/${position}${queryParams}`);
     }
 
     async createBreaker(breakerData) {
@@ -150,6 +150,39 @@ class ApiClient {
             throw new Error('Invalid breaker ID');
         }
         return this.request(`/breakers/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    // Room API methods
+    async getAllRooms() {
+        return this.request('/rooms');
+    }
+
+    async createRoom(roomData) {
+        this.validateRoomData(roomData);
+        return this.request('/rooms', {
+            method: 'POST',
+            body: roomData,
+        });
+    }
+
+    async updateRoom(id, roomData) {
+        if (!this.isValidId(id)) {
+            throw new Error('Invalid room ID');
+        }
+        this.validateRoomData(roomData);
+        return this.request(`/rooms/${id}`, {
+            method: 'PUT',
+            body: roomData,
+        });
+    }
+
+    async deleteRoom(id) {
+        if (!this.isValidId(id)) {
+            throw new Error('Invalid room ID');
+        }
+        return this.request(`/rooms/${id}`, {
             method: 'DELETE',
         });
     }
@@ -224,7 +257,7 @@ class ApiClient {
             }
         }
         
-        if (data.amperage !== undefined && data.amperage !== null) {
+        if (data.amperage !== undefined && data.amperage !== null && data.amperage !== '') {
             if (typeof data.amperage !== 'number' || data.amperage <= 0 || data.amperage > 200) {
                 throw new Error('Amperage must be between 1 and 200');
             }
@@ -243,6 +276,21 @@ class ApiClient {
         
         if (data.subpanel_id !== undefined && data.subpanel_id !== null && !this.isValidId(data.subpanel_id)) {
             throw new Error('Subpanel ID must be a valid positive number');
+        }
+        
+        if (data.room_id !== undefined && data.room_id !== null && data.room_id !== '' && !this.isValidId(data.room_id)) {
+            throw new Error('Room ID must be a valid positive number');
+        }
+    }
+
+    validateRoomData(data) {
+        if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
+            throw new Error('Room name is required and must be a non-empty string');
+        }
+        
+        const validLevels = ['basement', 'main', 'upper'];
+        if (!data.level || !validLevels.includes(data.level)) {
+            throw new Error(`Level must be one of: ${validLevels.join(', ')}`);
         }
     }
 }

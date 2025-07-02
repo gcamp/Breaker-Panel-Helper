@@ -16,6 +16,7 @@ class BreakerPanelApp {
         this.api = new ApiClient();
         this.currentPanel = null;
         this.allPanels = [];
+        this.allRooms = [];
         this.currentBreaker = null;
         this.circuitCounter = 0;
         this.existingCircuits = [];
@@ -47,16 +48,21 @@ class BreakerPanelApp {
         this.bindElement('new-panel', 'click', () => this.openNewPanelModal());
         this.bindElement('delete-panel', 'click', () => this.deleteCurrentPanel());
         this.bindElement('current-panel', 'change', (e) => this.switchPanel(parseInt(e.target.value)));
+        this.bindElement('manage-rooms', 'click', () => this.openRoomManagementModal());
         
         // New panel modal
         this.bindElement('new-panel-form', 'submit', (e) => this.createNewPanel(e));
         this.bindElement('cancel-new-panel', 'click', () => this.closeNewPanelModal());
         
+        // Room management modal
+        this.bindElement('room-form', 'submit', (e) => this.createRoom(e));
+        this.bindElement('cancel-room', 'click', () => this.closeRoomManagementModal());
+        
         // Breaker management
         this.bindElement('breaker-form', 'submit', (e) => this.saveBreakerForm(e));
         this.bindElement('cancel-edit', 'click', () => this.closeModal());
         this.bindElement('add-circuit', 'click', () => this.addCircuitForm());
-        this.bindElement('breaker-double-pole', 'change', (e) => this.toggleDoublePole(e));
+        this.bindElement('breaker-type', 'change', (e) => this.toggleBreakerType(e));
         
         // View mode buttons
         this.bindElement('normal-mode', 'click', () => this.setViewMode('normal'));
@@ -66,6 +72,7 @@ class BreakerPanelApp {
         // Display mode buttons
         this.bindElement('panel-view', 'click', () => this.setDisplayMode('panel'));
         this.bindElement('circuit-list', 'click', () => this.setDisplayMode('circuit-list'));
+        this.bindElement('print-panel', 'click', () => this.printPanel());
         
         // Circuit list filters
         this.bindElement('circuit-search', 'input', () => this.applyCircuitFilters());
@@ -73,6 +80,7 @@ class BreakerPanelApp {
         this.bindElement('type-filter', 'change', () => this.applyCircuitFilters());
         this.bindElement('critical-filter', 'change', () => this.applyCircuitFilters());
         this.bindElement('monitor-filter', 'change', () => this.applyCircuitFilters());
+        this.bindElement('not-confirmed-filter', 'change', () => this.applyCircuitFilters());
         this.bindElement('clear-filters', 'click', () => this.clearCircuitFilters());
         
         // Global event listeners
@@ -103,6 +111,16 @@ class BreakerPanelApp {
                 e.target.style.display = 'none';
             }
         });
+        
+        // ESC key to close modals
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const openModals = document.querySelectorAll('.modal[style*="display: block"], .modal[style*="display:block"]');
+                openModals.forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
 
         // Sortable headers for circuit list
         document.addEventListener('click', (e) => {
@@ -120,7 +138,10 @@ class BreakerPanelApp {
 
     async loadDefaultPanel() {
         try {
-            await this.loadAllPanels();
+            await Promise.all([
+                this.loadAllPanels(),
+                this.loadAllRooms()
+            ]);
             if (this.allPanels.length > 0) {
                 this.currentPanel = this.allPanels[0];
                 this.renderPanel();
@@ -203,7 +224,7 @@ class BreakerPanelApp {
     }
 
     async createDefaultPanel() {
-        const panelData = { name: 'Main Panel', size: 40 };
+        const panelData = { name: window.i18n.t('panels.mainPanel'), size: 40 };
         
         try {
             this.currentPanel = await this.api.createPanel(panelData);
@@ -274,11 +295,11 @@ class BreakerPanelApp {
 
     async deleteCurrentPanel() {
         if (this.allPanels.length <= 1) {
-            alert('Cannot delete the last panel');
+            alert(window.i18n.t('errors.cannotDeleteLastPanel'));
             return;
         }
 
-        const confirmDelete = confirm(`Are you sure you want to delete "${this.currentPanel.name}"? This action cannot be undone.`);
+        const confirmDelete = confirm(window.i18n.t('panels.deletePanelConfirm', { panelName: this.currentPanel.name }));
         if (!confirmDelete) return;
 
         try {
@@ -328,6 +349,7 @@ class BreakerPanelApp {
         const displayButtons = document.querySelectorAll('.display-btn');
         const panelContainer = document.querySelector('.panel-container');
         const circuitListContainer = document.querySelector('.circuit-list-container');
+        const viewModesContainer = document.getElementById('view-modes-container');
         
         if (!panelContainer || !circuitListContainer) return;
         
@@ -337,11 +359,13 @@ class BreakerPanelApp {
         if (mode === 'circuit-list') {
             panelContainer.style.display = 'none';
             circuitListContainer.style.display = 'block';
+            if (viewModesContainer) viewModesContainer.style.visibility = 'hidden';
             this.setActiveButton('circuit-list');
             this.loadCircuitList();
         } else {
             panelContainer.style.display = 'block';
             circuitListContainer.style.display = 'none';
+            if (viewModesContainer) viewModesContainer.style.visibility = 'visible';
             this.setActiveButton('panel-view');
         }
     }
@@ -382,8 +406,8 @@ class BreakerPanelApp {
         this.panelRenderer.addCircuitForm(circuitData);
     }
 
-    toggleDoublePole(e) {
-        this.panelRenderer.toggleDoublePole(e);
+    toggleBreakerType(e) {
+        this.panelRenderer.toggleBreakerType(e);
     }
 
     async saveBreakerForm(e) {
@@ -443,9 +467,430 @@ class BreakerPanelApp {
             timeout = setTimeout(later, wait);
         };
     }
+
+    // ============================================================================
+    // PRINT FUNCTIONALITY
+    // ============================================================================
+
+    printPanel() {
+        if (!this.currentPanel) {
+            alert(window.i18n.t('print.noPanelSelected'));
+            return;
+        }
+
+        // Create a print window with the panel content
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        const panelHtml = this.generatePrintHtml();
+        
+        printWindow.document.write(panelHtml);
+        printWindow.document.close();
+        
+        // Wait for content to load, then print
+        printWindow.onload = () => {
+            printWindow.print();
+            printWindow.close();
+        };
+    }
+
+    generatePrintHtml() {
+        const panelElement = document.getElementById('breaker-panel');
+        const panelContainer = document.querySelector('.panel-container');
+        
+        if (!panelElement || !panelContainer) {
+            return `<html><body><p>${window.i18n.t('print.panelNotAvailable')}</p></body></html>`;
+        }
+
+        // Clone the panel element to avoid modifying the original
+        const clonedPanel = panelElement.cloneNode(true);
+        const clonedContainer = panelContainer.cloneNode(true);
+        clonedContainer.querySelector('.breaker-panel').replaceWith(clonedPanel);
+
+        const currentDate = new Date().toLocaleDateString();
+        
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${window.i18n.t('print.title', { panelName: this.currentPanel.name })}</title>
+            <style>
+                ${this.getPrintStyles()}
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h1>${window.i18n.t('print.title', { panelName: this.currentPanel.name })}</h1>
+                <div class="print-info">
+                    <span>${window.i18n.t('print.printed')} ${currentDate}</span>
+                </div>
+            </div>
+            
+            <div class="print-panel-container">
+                ${clonedContainer.innerHTML}
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    getPrintStyles() {
+        return `
+            @page {
+                size: letter;
+                margin: 0.5in;
+            }
+            
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Arial', sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #000;
+                background: white;
+            }
+            
+            .print-header {
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #333;
+                padding-bottom: 10px;
+            }
+            
+            .print-header h1 {
+                font-size: 18px;
+                margin-bottom: 5px;
+                color: #333;
+            }
+            
+            .print-info {
+                display: flex;
+                justify-content: center;
+                font-size: 10px;
+                color: #666;
+            }
+            
+            .print-panel-container {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+            
+            .panel-container {
+                background: white;
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+            
+            .breaker-panel {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2px;
+                max-width: 650px;
+                width: 100%;
+                margin: 0 auto;
+                border: 2px solid #000;
+                padding: 12px;
+                background-color: #f5f5f5;
+            }
+            
+            .breaker-container {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                min-height: 35px;
+            }
+            
+            .breaker {
+                height: 35px;
+                flex: 1;
+                border: 1px solid #666;
+                border-radius: 3px;
+                background-color: #fff;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-size: 9px;
+                position: relative;
+            }
+            
+            .breaker.occupied {
+                background-color: #e8f5e8;
+                border-color: #27ae60;
+            }
+            
+            .breaker-container.double-pole-container {
+                grid-row: span 2;
+                min-height: 74px;
+            }
+            
+            .breaker-container.double-pole-container .breaker {
+                height: 74px;
+            }
+            
+            .breaker-container.double-pole-container .breaker-amperage-box {
+                height: 60px;
+            }
+            
+            .breaker-amperage-box {
+                width: 20px;
+                height: 25px;
+                background-color: #333;
+                border-radius: 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 7px;
+                font-weight: bold;
+                color: transparent;
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+            }
+            
+            .breaker-amperage-box.has-amperage {
+                background-color: #222;
+                color: white;
+            }
+            
+            .breaker-amperage-box.left {
+                order: -1;
+            }
+            
+            .breaker-amperage-box.right {
+                order: 1;
+            }
+            
+            .breaker-number {
+                font-size: 10px;
+                font-weight: bold;
+                color: #333;
+                background-color: #f0f0f0;
+                padding: 1px 3px;
+                border-radius: 2px;
+                min-width: 16px;
+                text-align: center;
+            }
+            
+            .breaker-label {
+                font-size: 8px;
+                font-weight: 600;
+                text-align: center;
+                max-width: 140px;
+                color: #333;
+                margin-top: 2px;
+                line-height: 1.1;
+                white-space: pre-line;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+            }
+            
+            .breaker.has-subpanel {
+                border-left: 2px solid #8b5cf6;
+            }
+            
+            .breaker.has-subpanel .breaker-label {
+                color: #8b5cf6;
+                font-weight: 700;
+            }
+            
+            .breaker-indicators {
+                display: none;
+            }
+            
+            .indicator {
+                display: none;
+            }
+            
+            /* Tandem Breaker Print Styles */
+            .breaker-slot {
+                width: 100%;
+                height: 100%;
+            }
+            
+            .tandem-breakers {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                gap: 1px;
+            }
+            
+            .tandem-breakers .breaker {
+                height: 50%;
+                font-size: 7px;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 1px 2px;
+                gap: 2px;
+            }
+            
+            .tandem-breakers .breaker-number {
+                font-size: 7px;
+                padding: 1px 2px;
+                min-width: 12px;
+                flex-shrink: 0;
+            }
+            
+            .tandem-breakers .breaker-label {
+                font-size: 6px;
+                line-height: 1.1;
+                flex: 1;
+                text-align: left;
+                white-space: pre-line;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                margin-top: 0;
+            }
+            
+            .tandem-breakers .breaker-indicators {
+                display: none;
+            }
+            
+            .breaker-container.has-tandem .single-breaker {
+                display: none;
+            }
+            
+            .breaker-container.has-tandem .tandem-breakers {
+                display: flex !important;
+            }
+            
+            .breaker-container:not(.has-tandem) .tandem-breakers {
+                display: none;
+            }
+            
+            .breaker-container:not(.has-tandem) .single-breaker {
+                display: flex;
+            }
+            
+            @media print {
+                body { -webkit-print-color-adjust: exact; }
+            }
+        `;
+    }
+
+    // ============================================================================
+    // ROOM MANAGEMENT
+    // ============================================================================
+
+    async loadAllRooms() {
+        try {
+            this.allRooms = await this.api.getAllRooms();
+        } catch (error) {
+            this.handleError('Failed to load rooms', error);
+            this.allRooms = [];
+        }
+    }
+
+    openRoomManagementModal() {
+        this.loadRoomsList();
+        this.showModal('room-management-modal');
+    }
+
+    closeRoomManagementModal() {
+        this.hideModal('room-management-modal');
+        document.getElementById('room-name').value = '';
+        document.getElementById('room-level').value = '';
+    }
+
+    async createRoom(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const roomData = {
+            name: formData.get('name'),
+            level: formData.get('level')
+        };
+
+        try {
+            await this.api.createRoom(roomData);
+            await this.loadAllRooms();
+            this.loadRoomsList();
+            
+            // Clear form
+            document.getElementById('room-name').value = '';
+            document.getElementById('room-level').value = '';
+        } catch (error) {
+            this.handleError('Failed to create room', error);
+        }
+    }
+
+    async deleteRoom(roomId) {
+        const room = this.allRooms.find(r => r.id === roomId);
+        if (!room) return;
+
+        const confirmDelete = confirm(window.i18n.t('rooms.deleteRoomConfirm', { roomName: room.name }));
+        if (!confirmDelete) return;
+
+        try {
+            await this.api.deleteRoom(roomId);
+            await this.loadAllRooms();
+            this.loadRoomsList();
+        } catch (error) {
+            this.handleError('Failed to delete room', error);
+        }
+    }
+
+    loadRoomsList() {
+        const container = document.getElementById('rooms-container');
+        if (!container) return;
+
+        if (this.allRooms.length === 0) {
+            container.innerHTML = `<p class="no-rooms">${window.i18n.t('rooms.noRooms')}</p>`;
+            return;
+        }
+
+        const roomsByLevel = this.allRooms.reduce((acc, room) => {
+            if (!acc[room.level]) acc[room.level] = [];
+            acc[room.level].push(room);
+            return acc;
+        }, {});
+
+        const levelOrder = ['upper', 'main', 'basement', 'outside'];
+        const levelColors = {
+            basement: '🔵',
+            main: '🟢', 
+            upper: '🟠',
+            outside: '⚫'
+        };
+        const levelNames = {
+            basement: window.i18n.t('rooms.basement'),
+            main: window.i18n.t('rooms.mainLevel'),
+            upper: window.i18n.t('rooms.upperLevel'),
+            outside: window.i18n.t('rooms.outside')
+        };
+
+        let html = '';
+        levelOrder.forEach(level => {
+            if (roomsByLevel[level]) {
+                html += `<div class="room-level-group">
+                    <h4>${levelColors[level]} ${levelNames[level]}</h4>
+                    <div class="room-items">`;
+                
+                roomsByLevel[level].forEach(room => {
+                    html += `<div class="room-item" data-level="${level}">
+                        <span class="room-name">${room.name}</span>
+                        <button class="delete-room-btn" onclick="app.deleteRoom(${room.id})">${window.i18n.t('app.delete')}</button>
+                    </div>`;
+                });
+                
+                html += `</div></div>`;
+            }
+        });
+
+        container.innerHTML = html;
+    }
 }
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new BreakerPanelApp();
+    window.app = new BreakerPanelApp();
 });
