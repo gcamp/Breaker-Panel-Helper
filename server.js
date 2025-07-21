@@ -106,33 +106,12 @@ const dbRun = (query, params = []) => {
     });
 };
 
-
-
-// Static route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Global error handler
-app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-    console.error('Server error:', err);
-    res.status(500).json({ 
-        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
-    });
-});
-
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Endpoint not found' });
-});
-
-// Database initialization and server startup
-const connectDB = () => {
+// Database permissions validation
+const validateDatabasePermissions = (dbPath) => {
     return new Promise((resolve, reject) => {
-        const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
+        const dbDir = path.dirname(dbPath);
         
-        // Ensure directory exists for the database file
-        const dbDir = path.dirname(DB_PATH);
+        // Ensure directory exists
         if (!fs.existsSync(dbDir)) {
             try {
                 fs.mkdirSync(dbDir, { recursive: true });
@@ -155,6 +134,60 @@ const connectDB = () => {
             const stats = fs.statSync(dbDir);
             console.error(`Directory permissions: mode=${stats.mode.toString(8)} uid=${stats.uid} gid=${stats.gid}`);
             reject(new Error(`Database directory ${dbDir} is not writable. Check volume mount permissions.`));
+            return;
+        }
+        
+        // Check if database file exists and is writable
+        if (fs.existsSync(dbPath)) {
+            try {
+                fs.accessSync(dbPath, fs.constants.W_OK);
+                console.log(`Database file is writable: ${dbPath}`);
+            } catch (dbAccessErr) {
+                console.error(`Database file is read-only: ${dbPath}`);
+                const dbStats = fs.statSync(dbPath);
+                console.error(`Database file permissions: mode=${dbStats.mode.toString(8)} uid=${dbStats.uid} gid=${dbStats.gid}`);
+                console.error('Current user in container:', process.getuid ? `UID=${process.getuid()} GID=${process.getgid()}` : 'Unknown');
+                console.error('\nFIX: Run these commands on your Unraid server:');
+                console.error(`  chmod 644 ${dbPath}`);
+                console.error(`  chown 1001:1001 ${dbPath}`);
+                console.error('Or delete the file to let the application create a new one.');
+                reject(new Error(`Database file ${dbPath} is read-only. See console for fix instructions.`));
+                return;
+            }
+        }
+        
+        resolve();
+    });
+};
+
+// Static route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Global error handler
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+    console.error('Server error:', err);
+    res.status(500).json({ 
+        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Database initialization and server startup
+const connectDB = () => {
+    return new Promise(async (resolve, reject) => {
+        const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
+        
+        // Validate database path and permissions
+        try {
+            await validateDatabasePermissions(DB_PATH);
+        } catch (validationErr) {
+            reject(validationErr);
             return;
         }
         
