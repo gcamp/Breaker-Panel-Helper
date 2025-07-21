@@ -179,17 +179,13 @@ app.use((req, res) => {
 });
 
 // Database initialization and server startup
-const connectDB = () => {
-    return new Promise(async (resolve, reject) => {
-        const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
-        
-        // Validate database path and permissions
-        try {
-            await validateDatabasePermissions(DB_PATH);
-        } catch (validationErr) {
-            reject(validationErr);
-            return;
-        }
+const connectDB = async () => {
+    const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
+    
+    // Validate database path and permissions
+    await validateDatabasePermissions(DB_PATH);
+    
+    return new Promise((resolve, reject) => {
         
         db = new sqlite3.Database(DB_PATH, async (err) => {
             if (err) {
