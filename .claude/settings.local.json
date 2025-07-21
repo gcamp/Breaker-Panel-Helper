@@ -25,7 +25,11 @@
       "Bash(chmod:*)",
       "Bash(PORT=3001 npm start)",
       "Bash(echo)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

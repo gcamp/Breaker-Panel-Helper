@@ -102,7 +102,7 @@ describe('Performance Tests', () => {
             const start = Date.now();
 
             // Make many concurrent requests
-            const promises = Array(concurrentRequests).fill().map((_, i) => 
+            const promises = Array(concurrentRequests).fill().map(() => 
                 request(app)
                     .get(`/api/panels/${panelId}/breakers`)
                     .expect(200)

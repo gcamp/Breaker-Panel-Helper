@@ -42,216 +42,212 @@ class I18n {
         return {
             // Application title and navigation
             app: {
-                title: "Breaker Panel Helper",
-                loading: "Loading...",
-                error: "Error",
-                success: "Success",
-                confirm: "Confirm",
-                cancel: "Cancel",
-                save: "Save",
-                delete: "Delete",
-                edit: "Edit",
-                add: "Add",
-                remove: "Remove",
-                close: "Close",
-                yes: "Yes",
-                no: "No",
-                ok: "OK"
+                title: 'Breaker Panel Helper',
+                loading: 'Loading...',
+                error: 'Error',
+                success: 'Success',
+                confirm: 'Confirm',
+                cancel: 'Cancel',
+                save: 'Save',
+                delete: 'Delete',
+                edit: 'Edit',
+                add: 'Add',
+                remove: 'Remove',
+                close: 'Close',
+                yes: 'Yes',
+                no: 'No',
+                ok: 'OK'
             },
             
             // Panel management
             panels: {
-                title: "Electrical Panels",
-                currentPanel: "Current Panel:",
-                newPanel: "New Panel",
-                deletePanel: "Delete Panel",
-                manageRooms: "Manage Rooms",
-                createPanel: "Create New Panel",
-                updatePanel: "Update Panel",
-                panelName: "Panel Name:",
-                panelSize: "Panel Size:",
-                spaces: "Spaces",
-                mainPanel: "Main Panel",
-                subpanel: "Subpanel",
-                deletePanelConfirm: "Are you sure you want to delete this panel? This will also delete all breakers and circuits.",
-                panelCreated: "Panel created successfully",
-                panelUpdated: "Panel updated successfully",
-                panelDeleted: "Panel deleted successfully"
+                title: 'Electrical Panels',
+                currentPanel: 'Current Panel:',
+                newPanel: 'New Panel',
+                deletePanel: 'Delete Panel',
+                manageRooms: 'Manage Rooms',
+                createPanel: 'Create New Panel',
+                updatePanel: 'Update Panel',
+                panelName: 'Panel Name:',
+                panelSize: 'Panel Size:',
+                spaces: 'Spaces',
+                mainPanel: 'Main Panel',
+                subpanel: 'Subpanel',
+                deletePanelConfirm: 'Are you sure you want to delete this panel? This will also delete all breakers and circuits.',
+                panelCreated: 'Panel created successfully',
+                panelUpdated: 'Panel updated successfully',
+                panelDeleted: 'Panel deleted successfully'
             },
             
             // Breaker management
             breakers: {
-                editBreaker: "Edit Breaker",
-                breakerLabel: "Label:",
-                amperage: "Amperage:",
-                criticalCircuit: "🔋 Critical Circuit",
-                shouldMonitor: "📈 Should Monitor",
-                testedConfirmed: "✅ Tested & Confirmed",
-                breakerType: "Breaker Type:",
-                singleBreaker: "Single Breaker",
-                doublePoleBreaker: "Double Pole Breaker",
-                tandemBreaker: "Tandem Breaker (A+B in same slot)",
-                tandemBDisabled: "Tandem option controlled by slot A",
-                slotPosition: "Slot Position:",
-                slotA: "A (Left/Top)",
-                slotB: "B (Right/Bottom)",
-                none: "None",
-                breakerSaved: "Breaker saved successfully",
-                breakerDeleted: "Breaker deleted successfully",
-                cannotCreateDoublePole: "Cannot create double pole breaker - not enough space below",
-                breakerExists: "A breaker already exists at this position and slot"
+                editBreaker: 'Edit Breaker',
+                breakerLabel: 'Label:',
+                amperage: 'Amperage:',
+                criticalCircuit: '🔋 Critical Circuit',
+                shouldMonitor: '📈 Should Monitor',
+                testedConfirmed: '✅ Tested & Confirmed',
+                breakerType: 'Breaker Type:',
+                singleBreaker: 'Single Breaker',
+                doublePoleBreaker: 'Double Pole Breaker',
+                tandemBreaker: 'Tandem Breaker (A+B in same slot)',
+                tandemBDisabled: 'Tandem option controlled by slot A',
+                slotPosition: 'Slot Position:',
+                slotA: 'A (Left/Top)',
+                slotB: 'B (Right/Bottom)',
+                none: 'None',
+                breakerSaved: 'Breaker saved successfully',
+                breakerDeleted: 'Breaker deleted successfully',
+                cannotCreateDoublePole: 'Cannot create double pole breaker - not enough space below',
+                breakerExists: 'A breaker already exists at this position and slot'
             },
             
             // Circuit management
             circuits: {
-                title: "Circuits",
-                addCircuit: "Add Circuit",
-                removeCircuit: "Remove",
-                circuitNumber: "Circuit",
-                room: "Room:",
-                type: "Type:",
-                notes: "Notes:",
-                linkedPanel: "Linked Panel:",
-                selectRoom: "Select Room...",
-                selectPanel: "Select Panel...",
-                goToPanel: "Go to Panel",
-                additionalNotes: "Additional notes...",
-                circuitSaved: "Circuit saved successfully",
-                circuitDeleted: "Circuit deleted successfully",
+                title: 'Circuits',
+                addCircuit: 'Add Circuit',
+                removeCircuit: 'Remove',
+                circuitNumber: 'Circuit',
+                room: 'Room:',
+                type: 'Type:',
+                notes: 'Notes:',
+                linkedPanel: 'Linked Panel:',
+                selectRoom: 'Select Room...',
+                selectPanel: 'Select Panel...',
+                goToPanel: 'Go to Panel',
+                additionalNotes: 'Additional notes...',
+                circuitSaved: 'Circuit saved successfully',
+                circuitDeleted: 'Circuit deleted successfully',
                 
                 // Circuit types
                 types: {
-                    outlet: "🔵 Outlet",
-                    lighting: "🟠 Lighting", 
-                    heating: "🔴 Heating",
-                    appliance: "🟢 Appliance",
-                    subpanel: "🟣 Subpanel"
+                    outlet: '🔵 Outlet',
+                    lighting: '🟠 Lighting', 
+                    heating: '🔴 Heating',
+                    appliance: '🟢 Appliance',
+                    subpanel: '🟣 Subpanel'
                 }
             },
             
             // Room management
             rooms: {
-                title: "Manage Rooms",
-                addNewRoom: "Add New Room",
-                existingRooms: "Existing Rooms",
-                roomName: "Room Name:",
-                level: "Level:",
-                selectLevel: "Select Level...",
-                upperLevel: "🟠 Upper Level",
-                mainLevel: "🟢 Main Level",
-                basement: "🔵 Basement",
-                outside: "⚫ Outside",
-                roomCreated: "Room created successfully",
-                roomUpdated: "Room updated successfully",
-                roomDeleted: "Room deleted successfully",
-                roomExists: "A room with this name already exists",
-                noRooms: "No rooms configured yet",
-                deleteRoomConfirm: "Are you sure you want to delete \"{roomName}\"? This will remove it from all circuits.",
-                upperLevel: "Upper Level",
-                mainLevel: "Main Level",
-                basement: "Basement",
-                outside: "Outside"
+                title: 'Manage Rooms',
+                addNewRoom: 'Add New Room',
+                existingRooms: 'Existing Rooms',
+                roomName: 'Room Name:',
+                level: 'Level:',
+                selectLevel: 'Select Level...',
+                upperLevel: '🟠 Upper Level',
+                mainLevel: '🟢 Main Level',
+                basement: '🔵 Basement',
+                outside: '⚫ Outside',
+                roomCreated: 'Room created successfully',
+                roomUpdated: 'Room updated successfully',
+                roomDeleted: 'Room deleted successfully',
+                roomExists: 'A room with this name already exists',
+                noRooms: 'No rooms configured yet',
+                deleteRoomConfirm: 'Are you sure you want to delete "{roomName}"? This will remove it from all circuits.'
             },
             
             // Circuit list view
             circuitList: {
-                title: "Circuit List",
-                panelName: "Circuit List - {panelName}",
-                totalCircuits: "Total Circuits:",
-                filteredCircuits: "Filtered:",
-                search: "Search:",
-                searchPlaceholder: "Search circuits, rooms, notes...",
-                allRooms: "All Rooms",
-                circuitType: "Circuit Type:",
-                allTypes: "All Types",
-                flags: "Flags:",
-                critical: "🔋 Critical",
-                monitor: "📈 Monitor",
-                notConfirmed: "❌ Not Confirmed",
-                clearAll: "Clear All",
-                noCircuits: "No circuits configured for this panel.",
-                noMatchingCircuits: "No circuits match the current filters.",
-                clickToEdit: "Click to edit this circuit",
+                title: 'Circuit List',
+                panelName: 'Circuit List - {panelName}',
+                totalCircuits: 'Total Circuits:',
+                filteredCircuits: 'Filtered:',
+                search: 'Search:',
+                searchPlaceholder: 'Search circuits, rooms, notes...',
+                allRooms: 'All Rooms',
+                circuitType: 'Circuit Type:',
+                allTypes: 'All Types',
+                flags: 'Flags:',
+                critical: '🔋 Critical',
+                monitor: '📈 Monitor',
+                notConfirmed: '❌ Not Confirmed',
+                clearAll: 'Clear All',
+                noCircuits: 'No circuits configured for this panel.',
+                noMatchingCircuits: 'No circuits match the current filters.',
+                clickToEdit: 'Click to edit this circuit',
                 
                 // Table headers
                 headers: {
-                    breaker: "Breaker #",
-                    amps: "Amps", 
-                    room: "Room",
-                    type: "Type",
-                    notes: "Notes",
-                    flags: "Flags"
+                    breaker: 'Breaker #',
+                    amps: 'Amps', 
+                    room: 'Room',
+                    type: 'Type',
+                    notes: 'Notes',
+                    flags: 'Flags'
                 },
                 
                 // Flags
-                flagCritical: "🔋 CRITICAL",
-                flagMonitor: "📈 MONITOR", 
-                flagConfirmed: "✅ CONFIRMED"
+                flagCritical: '🔋 CRITICAL',
+                flagMonitor: '📈 MONITOR', 
+                flagConfirmed: '✅ CONFIRMED'
             },
             
             // View modes
             viewModes: {
-                title: "View Mode:",
-                normal: "Normal",
-                critical: "Critical", 
-                monitor: "Monitor"
+                title: 'View Mode:',
+                normal: 'Normal',
+                critical: 'Critical', 
+                monitor: 'Monitor'
             },
             
             // Display modes
             displayModes: {
-                title: "Display:",
-                panelView: "Panel View",
-                circuitList: "Circuit List",
-                printPanel: "🖨️ Print Panel"
+                title: 'Display:',
+                panelView: 'Panel View',
+                circuitList: 'Circuit List',
+                printPanel: '🖨️ Print Panel'
             },
             
             // Validation messages
             validation: {
-                required: "This field is required",
-                invalidName: "Name is required and must be a non-empty string",
-                invalidSize: "Size must be a number between 12 and 42",
-                invalidAmperage: "Amperage must be between 1 and 200",
-                invalidPosition: "Valid position is required",
-                invalidPanelId: "Valid panel ID is required",
-                invalidLevel: "Level must be one of: basement, main, upper, outside",
-                invalidCircuitType: "Circuit type must be one of: outlet, lighting, heating, appliance, subpanel",
-                invalidSlotPosition: "Slot position must be one of: single, A, B"
+                required: 'This field is required',
+                invalidName: 'Name is required and must be a non-empty string',
+                invalidSize: 'Size must be a number between 12 and 42',
+                invalidAmperage: 'Amperage must be between 1 and 200',
+                invalidPosition: 'Valid position is required',
+                invalidPanelId: 'Valid panel ID is required',
+                invalidLevel: 'Level must be one of: basement, main, upper, outside',
+                invalidCircuitType: 'Circuit type must be one of: outlet, lighting, heating, appliance, subpanel',
+                invalidSlotPosition: 'Slot position must be one of: single, A, B'
             },
             
             // Error messages
             errors: {
-                networkError: "Network error: Unable to connect to server",
-                loadPanels: "Failed to load panels",
-                loadBreakers: "Failed to load breakers", 
-                loadCircuits: "Failed to load circuits",
-                loadRooms: "Failed to load rooms",
-                saveBreaker: "Failed to save breaker",
-                saveCircuit: "Failed to save circuit",
-                saveRoom: "Failed to save room",
-                deleteBreaker: "Failed to delete breaker",
-                deleteCircuit: "Failed to delete circuit",
-                deleteRoom: "Failed to delete room",
-                panelNotFound: "Panel not found",
-                breakerNotFound: "Breaker not found",
-                circuitNotFound: "Circuit not found",
-                roomNotFound: "Room not found",
-                applicationInit: "Application initialization failed",
-                cannotDeleteLastPanel: "Cannot delete the last panel"
+                networkError: 'Network error: Unable to connect to server',
+                loadPanels: 'Failed to load panels',
+                loadBreakers: 'Failed to load breakers', 
+                loadCircuits: 'Failed to load circuits',
+                loadRooms: 'Failed to load rooms',
+                saveBreaker: 'Failed to save breaker',
+                saveCircuit: 'Failed to save circuit',
+                saveRoom: 'Failed to save room',
+                deleteBreaker: 'Failed to delete breaker',
+                deleteCircuit: 'Failed to delete circuit',
+                deleteRoom: 'Failed to delete room',
+                panelNotFound: 'Panel not found',
+                breakerNotFound: 'Breaker not found',
+                circuitNotFound: 'Circuit not found',
+                roomNotFound: 'Room not found',
+                applicationInit: 'Application initialization failed',
+                cannotDeleteLastPanel: 'Cannot delete the last panel'
             },
             
             // Print
             print: {
-                title: "Electrical Panel: {panelName}",
-                printed: "Printed:",
-                noPanelSelected: "No panel selected to print",
-                panelNotAvailable: "Panel not available for printing"
+                title: 'Electrical Panel: {panelName}',
+                printed: 'Printed:',
+                noPanelSelected: 'No panel selected to print',
+                panelNotAvailable: 'Panel not available for printing'
             },
             
             // Language selector
             language: {
-                title: "Language:",
-                english: "English",
-                french: "Français"
+                title: 'Language:',
+                english: 'English',
+                french: 'Français'
             }
         };
     }

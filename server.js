@@ -103,7 +103,7 @@ app.get('/', (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     console.error('Server error:', err);
     res.status(500).json({ 
         error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
@@ -156,14 +156,20 @@ const gracefulShutdown = () => {
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 
-// Start server
-connectDB()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
+// Export the app and connectDB for testing
+module.exports = app;
+module.exports.connectDB = connectDB;
+
+// Start server only when run directly (not when imported)
+if (require.main === module) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log(`Server running on http://localhost:${PORT}`);
+            });
+        })
+        .catch((err) => {
+            console.error('Failed to start server:', err);
+            process.exit(1);
         });
-    })
-    .catch((err) => {
-        console.error('Failed to start server:', err);
-        process.exit(1);
-    });
+}

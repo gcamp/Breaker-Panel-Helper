@@ -399,13 +399,14 @@ class CircuitListManager {
                 valueA = (a.circuit.notes || '').toLowerCase();
                 valueB = (b.circuit.notes || '').toLowerCase();
                 break;
-            case 'flags':
+            case 'flags': {
                 // Sort by number of flags, then by type
                 const flagsA = (a.breaker.critical ? 2 : 0) + (a.breaker.monitor ? 1 : 0);
                 const flagsB = (b.breaker.critical ? 2 : 0) + (b.breaker.monitor ? 1 : 0);
                 valueA = flagsA;
                 valueB = flagsB;
                 break;
+            }
             case 'linked':
                 valueA = this.getLinkedPanelName(a.circuit);
                 valueB = this.getLinkedPanelName(b.circuit);
@@ -424,4 +425,11 @@ class CircuitListManager {
         }
         return '';
     }
+}
+
+// Export for Node.js environment (tests)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CircuitListManager;
+} else if (typeof global !== 'undefined') {
+    global.CircuitListManager = CircuitListManager;
 }

@@ -1,13 +1,11 @@
 const request = require('supertest');
-const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
-const path = require('path');
 
 // Import the app
 const app = require('../server.js');
+const { connectDB } = require('../server.js');
 
 describe('Breaker Panel API Tests', () => {
-    let testDb;
     const TEST_DB_PATH = 'test_api.db';
 
     beforeAll(async () => {
@@ -19,8 +17,8 @@ describe('Breaker Panel API Tests', () => {
             fs.unlinkSync(TEST_DB_PATH);
         }
         
-        // Wait a bit for server to initialize
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Initialize database connection
+        await connectDB();
     });
 
     afterAll(async () => {

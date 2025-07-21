@@ -505,7 +505,7 @@ class CriticalMovePlanner {
                     preferred: preferredSide ? (isLeft === (preferredSide === 'left')) : true
                 });
             }
-        };
+        }
 
         // Sort by preference (same side first), then by position
         return available.sort((a, b) => {
@@ -515,7 +515,7 @@ class CriticalMovePlanner {
     }
 
     // Handle tandem breaker splitting
-    async analyzeTandemSplitting(criticalBreakers) {
+    async analyzeTandemSplitting() {
         // Get ALL tandem breakers (not just critical ones) to analyze mixed tandems
         const allTandemBreakers = await this.dbAll(`
             SELECT * FROM breakers 
@@ -536,7 +536,7 @@ class CriticalMovePlanner {
         }
 
         // Analyze each tandem group
-        for (const [key, group] of tandemGroups) {
+        for (const [, group] of tandemGroups) {
             const criticalSlots = [];
             const nonCriticalSlots = [];
 

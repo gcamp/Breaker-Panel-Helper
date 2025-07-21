@@ -3,11 +3,6 @@
  * Manages electrical panel breakers with comprehensive circuit tracking
  */
 
-// Constants
-const CIRCUIT_TYPES = ['outlet', 'lighting', 'heating', 'appliance', 'subpanel'];
-const VIEW_MODES = ['normal', 'critical', 'monitor'];
-const DISPLAY_MODES = ['panel', 'circuit-list'];
-
 /**
  * Main Application Class
  */
@@ -909,7 +904,7 @@ class BreakerPanelApp {
                 item.classList.add('dragging');
             });
             
-            item.addEventListener('dragend', (e) => {
+            item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
             });
         });

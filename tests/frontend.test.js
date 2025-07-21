@@ -45,9 +45,9 @@ global.document = dom.window.document;
 global.fetch = jest.fn();
 
 // Load the frontend modules
-require('../public/api-client.js');
-require('../public/panel-renderer.js');
-require('../public/circuit-list.js');
+const ApiClient = require('../public/api-client.js');
+const PanelRenderer = require('../public/panel-renderer.js');
+const CircuitListManager = require('../public/circuit-list.js');
 
 describe('Frontend Unit Tests', () => {
     describe('ApiClient', () => {

@@ -104,7 +104,7 @@ describe('Integration Tests - Real-world Scenarios', () => {
                 });
 
             // Tandem breakers
-            const bedroomOutletsA = await request(app)
+            await request(app)
                 .post('/api/breakers')
                 .send({
                     panel_id: mainPanelId,
@@ -115,7 +115,7 @@ describe('Integration Tests - Real-world Scenarios', () => {
                     slot_position: 'A'
                 });
 
-            const bedroomOutletsB = await request(app)
+            await request(app)
                 .post('/api/breakers')
                 .send({
                     panel_id: mainPanelId,
@@ -308,7 +308,7 @@ describe('Integration Tests - Real-world Scenarios', () => {
                     label: 'Test Breaker'
                 });
 
-            const testCircuit = await request(app)
+            await request(app)
                 .post('/api/circuits')
                 .send({
                     breaker_id: testBreaker.body.id,
@@ -323,7 +323,7 @@ describe('Integration Tests - Real-world Scenarios', () => {
                 .expect(200);
 
             // Verify circuit was also deleted
-            const remainingCircuits = await request(app)
+            await request(app)
                 .get(`/api/breakers/${testBreaker.body.id}/circuits`)
                 .expect(404); // Breaker no longer exists
         });

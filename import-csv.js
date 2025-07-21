@@ -10,7 +10,6 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
-const path = require('path');
 
 // Configuration
 const CSV_FILE = 'Panneau electrique - Liste.csv';
@@ -137,7 +136,6 @@ class CSVImporter {
     // Parse CSV file
     parseCSV(csvContent) {
         const lines = csvContent.split('\n');
-        const header = lines[0].split(',');
         const data = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -363,7 +361,7 @@ class CSVImporter {
         }
 
         // Create breakers and their circuits
-        for (const [key, group] of breakerGroups) {
+        for (const [, group] of breakerGroups) {
             try {
                 // Create breaker
                 const breakerResult = await this.dbRun(`

@@ -108,7 +108,7 @@ class PanelRenderer {
                 const breakerElement = container.querySelector(`[data-slot="${breaker.slot_position}"]`);
                 if (breakerElement) {
                     breakerElement.classList.add('occupied');
-                    await this.updateBreakerContent(breakerElement, breaker, container);
+                    await this.updateBreakerContent(breakerElement, breaker);
                 }
             }
         } else {
@@ -117,7 +117,7 @@ class PanelRenderer {
             const breakerElement = container.querySelector('.single-breaker');
             if (breakerElement) {
                 breakerElement.classList.add('occupied');
-                await this.updateBreakerContent(breakerElement, breaker, container);
+                await this.updateBreakerContent(breakerElement, breaker);
             }
         }
     }
@@ -134,7 +134,7 @@ class PanelRenderer {
             const breakerElement = container.querySelector(`[data-slot="${breaker.slot_position}"]`);
             if (breakerElement) {
                 breakerElement.classList.add('occupied');
-                await this.updateBreakerContent(breakerElement, breaker, container);
+                await this.updateBreakerContent(breakerElement, breaker);
             }
         } else {
             // For single breakers, check if there are any tandem breakers at this position
@@ -147,13 +147,13 @@ class PanelRenderer {
                 const breakerElement = container.querySelector('.single-breaker');
                 if (breakerElement) {
                     breakerElement.classList.add('occupied');
-                    await this.updateBreakerContent(breakerElement, breaker, container);
+                    await this.updateBreakerContent(breakerElement, breaker);
                 }
             }
         }
     }
 
-    async updateBreakerContent(breakerElement, breaker, container) {
+    async updateBreakerContent(breakerElement, breaker) {
         // Handle flags
         this.updateBreakerFlags(breakerElement, breaker);
         
@@ -763,9 +763,8 @@ class PanelRenderer {
         });
     }
 
-    async handleMoveCircuit(e) {
+    async handleMoveCircuit() {
         try {
-            const formData = new FormData(e.target);
             const targetPanelId = parseInt(document.getElementById('target-panel').value);
             const targetPosition = parseInt(document.getElementById('target-position').value);
             const targetSlotPosition = document.getElementById('target-slot').value;
@@ -776,7 +775,7 @@ class PanelRenderer {
             }
             
             // Call API to move circuit
-            const result = await this.app.api.moveCircuit(
+            await this.app.api.moveCircuit(
                 this.app.currentCircuitToMove.id,
                 targetPanelId,
                 targetPosition,
@@ -902,4 +901,11 @@ class PanelRenderer {
         this.app.circuitCounter = 0;
         this.app.existingCircuits = [];
     }
+}
+
+// Export for Node.js environment (tests)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PanelRenderer;
+} else if (typeof global !== 'undefined') {
+    global.PanelRenderer = PanelRenderer;
 }
