@@ -1,7 +1,7 @@
 # Breaker Panel Helper
 
-[![CI/CD Pipeline](https://github.com/your-username/breaker-panel-helper/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/your-username/breaker-panel-helper/actions)
-[![Docker Image](https://ghcr-badge.egpl.dev/your-username/breaker-panel-helper/latest_by_date)](https://github.com/your-username/breaker-panel-helper/pkgs/container/breaker-panel-helper)
+[![CI/CD Pipeline](https://github.com/gcamp/breaker-panel-helper/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/your-username/breaker-panel-helper/actions)
+[![Docker Image](https://ghcr-badge.egpl.dev/gcamp/breaker-panel-helper/latest_by_date)](https://github.com/your-username/breaker-panel-helper/pkgs/container/breaker-panel-helper)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive web application for managing electrical panel breakers with advanced features including tandem breaker support, room management, and circuit tracking.
