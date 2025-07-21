@@ -14,36 +14,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.changes.outputs.backend }}
-      frontend: ${{ steps.changes.outputs.frontend }}
-      docker: ${{ steps.changes.outputs.docker }}
-      tests: ${{ steps.changes.outputs.tests }}
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Detect changes
-      uses: dorny/paths-filter@v2
-      id: changes
-      with:
-        filters: |
-          backend:
-            - 'server.js'
-            - 'package*.json'
-          frontend:
-            - 'public/**'
-          docker:
-            - 'Dockerfile'
-            - '.dockerignore'
-            - 'docker-compose.yml'
-          tests:
-            - 'tests/**'
-            - '*.test.js'
-            - 'validate-features.js'
 
   test:
     name: Run Tests
@@ -83,8 +53,7 @@ jobs:
   test-backend:
     name: Test Backend Changes
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    needs: test
 
     steps:
     - name: Checkout repository
@@ -111,8 +80,7 @@ jobs:
   test-frontend:
     name: Test Frontend Changes
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    needs: test
 
     steps:
     - name: Checkout repository
@@ -231,8 +199,7 @@ jobs:
   test-docker:
     name: Test Docker Changes
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: ${{ needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+    needs: test
 
     steps:
     - name: Checkout repository
