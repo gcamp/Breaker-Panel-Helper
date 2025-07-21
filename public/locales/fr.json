@@ -54,6 +54,7 @@
         "none": "Aucun",
         "breakerSaved": "Disjoncteur enregistré avec succès",
         "breakerDeleted": "Disjoncteur supprimé avec succès",
+        "deleteBreaker": "Supprimer le Disjoncteur",
         "cannotCreateDoublePole": "Impossible de créer un disjoncteur bipolaire - pas assez d'espace en dessous",
         "breakerExists": "Un disjoncteur existe déjà à cette position et ce slot"
     },

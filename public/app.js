@@ -55,7 +55,7 @@ class BreakerPanelApp {
         
         // Breaker management
         this.bindElement('breaker-form', 'submit', (e) => this.saveBreakerForm(e));
-        this.bindElement('cancel-edit', 'click', () => this.closeModal());
+        this.bindElement('delete-breaker', 'click', () => this.deleteBreaker());
         this.bindElement('add-circuit', 'click', () => this.addCircuitForm());
         this.bindElement('breaker-type', 'change', (e) => this.toggleBreakerType(e));
         
@@ -412,6 +412,35 @@ class BreakerPanelApp {
 
     async saveBreakerForm(e) {
         return this.panelRenderer.saveBreakerForm(e);
+    }
+
+    async deleteBreaker() {
+        if (!this.currentBreaker) return;
+        
+        const confirmed = confirm(
+            `Are you sure you want to delete this breaker and all its circuits?\n\n` +
+            `This will clear breaker position ${this.currentBreaker.position} and remove all associated circuits. This action cannot be undone.`
+        );
+        
+        if (confirmed) {
+            try {
+                // Delete the breaker (this will also delete associated circuits due to foreign key constraints)
+                await this.api.deleteBreaker(this.currentBreaker.id);
+                
+                // Close the modal
+                this.closeModal();
+                
+                // Refresh the panel display
+                this.renderPanel();
+                
+                // Update circuit list if displayed
+                if (this.isCircuitListVisible()) {
+                    this.loadCircuitList();
+                }
+            } catch (error) {
+                this.handleError('Failed to delete breaker', error);
+            }
+        }
     }
 
     closeModal() {
