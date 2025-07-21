@@ -86,7 +86,7 @@ install_template() {
     cat > "${TEMPLATE_PATH}/${APP_NAME}.xml" << 'EOF'
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Breaker-Panel-Helper</Name>
+  <Name>breaker-panel-helper</Name>
   <Repository>breaker-panel-helper:latest</Repository>
   <Registry/>
   <Network>bridge</Network>
@@ -253,7 +253,7 @@ show_completion() {
     echo ""
     log_info "To manage via Unraid WebUI:"
     log_info "  1. Go to Docker tab"
-    log_info "  2. Look for 'Breaker-Panel-Helper' container"
+    log_info "  2. Look for 'breaker-panel-helper' container"
     log_info "  3. Use the template for future deployments"
     echo ""
     log_info "For CSV imports, place files in:"

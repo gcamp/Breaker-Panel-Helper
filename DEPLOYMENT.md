@@ -83,7 +83,7 @@ docker-compose up -d
 
 1. Copy `unraid-template.xml` to `/boot/config/plugins/dockerMan/templates-user/`
 2. Go to Docker tab in Unraid WebUI
-3. Click "Add Container" and select "Breaker-Panel-Helper"
+3. Click "Add Container" and select "breaker-panel-helper"
 4. Configure settings and apply
 
 ## Configuration Options

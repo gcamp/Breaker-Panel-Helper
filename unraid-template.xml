@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Breaker-Panel-Helper</Name>
+  <Name>breaker-panel-helper</Name>
   <Repository>ghcr.io/gcamp/breaker-panel-helper:latest</Repository>
   <Registry/>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/gcamp/Breaker-Panel-Helper</Support>
-  <Project>https://github.com/gcamp/Breaker-Panel-Helper</Project>
+  <Support>https://github.com/gcamp/breaker-panel-helper</Support>
+  <Project>https://github.com/gcamp/breaker-panel-helper</Project>
   <Overview>Comprehensive electrical panel breaker management system with French localization and advanced circuit tracking.</Overview>
   <Category>Tools: Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
