@@ -48,11 +48,6 @@
       <ContainerDir>/app/data</ContainerDir>
       <Mode>rw</Mode>
     </Volume>
-    <Volume>
-      <HostDir>/mnt/user/appdata/breaker-panel-helper/csv-imports</HostDir>
-      <ContainerDir>/app/csv-imports</ContainerDir>
-      <Mode>ro</Mode>
-    </Volume>
   </Data>
   <Environment>
     <Variable>
@@ -79,6 +74,5 @@
   <Labels/>
   <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port for web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
   <Config Name="Database Storage" Target="/app/data" Default="/mnt/user/appdata/breaker-panel-helper/data" Mode="rw" Description="Persistent storage for SQLite database" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/breaker-panel-helper/data</Config>
-  <Config Name="CSV Imports" Target="/app/csv-imports" Default="/mnt/user/appdata/breaker-panel-helper/csv-imports" Mode="ro" Description="Optional directory for CSV import files" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/breaker-panel-helper/csv-imports</Config>
   <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Container timezone" Type="Variable" Display="always" Required="false" Mask="false">America/New_York</Config>
 </Container>
