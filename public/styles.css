@@ -683,21 +683,6 @@ h1 {
     gap: 8px;
 }
 
-.move-circuit {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: background-color 0.3s ease;
-}
-
-.move-circuit:hover {
-    background-color: var(--primary-color);
-    filter: brightness(0.9);
-}
 
 .remove-circuit {
     background-color: var(--danger-color);
