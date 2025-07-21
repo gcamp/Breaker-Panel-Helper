@@ -2,6 +2,7 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { router, setDbHelpers } = require('./routes');
 
 const app = express();
@@ -129,6 +130,20 @@ app.use((req, res) => {
 const connectDB = () => {
     return new Promise((resolve, reject) => {
         const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
+        
+        // Ensure directory exists for the database file
+        const dbDir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dbDir)) {
+            try {
+                fs.mkdirSync(dbDir, { recursive: true });
+                console.log(`Created database directory: ${dbDir}`);
+            } catch (dirErr) {
+                console.error('Error creating database directory:', dirErr.message);
+                reject(dirErr);
+                return;
+            }
+        }
+        
         db = new sqlite3.Database(DB_PATH, async (err) => {
             if (err) {
                 console.error('Error opening database:', err.message);
