@@ -3,6 +3,7 @@ const fs = require('fs');
 
 // Import the app
 const app = require('../server.js');
+const { connectDB } = require('../server.js');
 
 describe('Integration Tests - Real-world Scenarios', () => {
     const TEST_DB_PATH = 'test_integration.db';
@@ -16,8 +17,8 @@ describe('Integration Tests - Real-world Scenarios', () => {
             fs.unlinkSync(TEST_DB_PATH);
         }
         
-        // Wait for server to initialize
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Initialize database connection
+        await connectDB();
     });
 
     afterAll(async () => {

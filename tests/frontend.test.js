@@ -36,6 +36,13 @@ const dom = new JSDOM(`
     <table id="circuit-table">
         <tbody id="circuit-table-body"></tbody>
     </table>
+    <!-- Circuit list filter elements -->
+    <input id="circuit-search" />
+    <input type="checkbox" id="critical-filter" />
+    <input type="checkbox" id="monitor-filter" />
+    <input type="checkbox" id="not-confirmed-filter" />
+    <select id="room-filter"></select>
+    <select id="type-filter"></select>
 </body>
 </html>
 `);
@@ -43,6 +50,11 @@ const dom = new JSDOM(`
 global.window = dom.window;
 global.document = dom.window.document;
 global.fetch = jest.fn();
+
+// Mock i18n for frontend tests
+global.window.i18n = {
+    t: jest.fn((key) => key) // Return the key as the translation for testing
+};
 
 // Load the frontend modules
 const ApiClient = require('../public/api-client.js');

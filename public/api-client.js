@@ -255,13 +255,11 @@ class ApiClient {
 
     // Validation helpers
     isValidId(id) {
-        const numId = typeof id === 'string' ? parseInt(id) : id;
-        return Number.isInteger(numId) && numId > 0;
+        return Number.isInteger(id) && id > 0;
     }
 
     isValidPosition(position) {
-        const numPos = typeof position === 'string' ? parseInt(position) : position;
-        return Number.isInteger(numPos) && numPos > 0;
+        return Number.isInteger(position) && position > 0;
     }
 
     // Basic client-side validation - server handles comprehensive validation
@@ -281,11 +279,17 @@ class ApiClient {
         if (requireAll && !this.isValidId(data.breaker_id)) {
             throw new Error('Valid breaker ID is required');
         }
+        if (data.type && !['outlet', 'lighting', 'heating', 'appliance', 'subpanel'].includes(data.type)) {
+            throw new Error('Circuit type must be one of: outlet, lighting, heating, appliance, subpanel');
+        }
     }
 
     validateRoomData(data) {
         if (!data.name?.trim()) throw new Error('Room name is required');
         if (!data.level) throw new Error('Room level is required');
+        if (!['basement', 'main', 'upper', 'outside'].includes(data.level)) {
+            throw new Error('Level must be one of: basement, main, upper, outside');
+        }
     }
 }
 
