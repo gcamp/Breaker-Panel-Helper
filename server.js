@@ -144,6 +144,20 @@ const connectDB = () => {
             }
         }
         
+        // Check directory permissions
+        try {
+            fs.accessSync(dbDir, fs.constants.W_OK);
+            console.log(`Database directory is writable: ${dbDir}`);
+        } catch (accessErr) {
+            console.error(`Database directory is not writable: ${dbDir}`);
+            console.error('Permission details:', accessErr.message);
+            console.error('Current user in container:', process.getuid ? `UID=${process.getuid()} GID=${process.getgid()}` : 'Unknown');
+            const stats = fs.statSync(dbDir);
+            console.error(`Directory permissions: mode=${stats.mode.toString(8)} uid=${stats.uid} gid=${stats.gid}`);
+            reject(new Error(`Database directory ${dbDir} is not writable. Check volume mount permissions.`));
+            return;
+        }
+        
         db = new sqlite3.Database(DB_PATH, async (err) => {
             if (err) {
                 console.error('Error opening database:', err.message);
