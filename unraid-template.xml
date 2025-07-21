@@ -7,8 +7,8 @@
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/your-username/breaker-panel-helper</Support>
-  <Project>https://github.com/your-username/breaker-panel-helper</Project>
+  <Support>https://github.com/gcamp/Breaker-Panel-Helper</Support>
+  <Project>https://github.com/gcamp/Breaker-Panel-Helper</Project>
   <Overview>Comprehensive electrical panel breaker management system with French localization and advanced circuit tracking.</Overview>
   <Category>Tools: Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
