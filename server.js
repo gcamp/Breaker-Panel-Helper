@@ -19,53 +19,61 @@ app.use('/api', router);
 let db;
 
 const initializeDatabase = () => {
-    db.serialize(() => {
-        // Enable foreign key constraints
-        db.run('PRAGMA foreign_keys = ON;');
-        
-        // Create tables with proper constraints
-        db.run(`CREATE TABLE IF NOT EXISTS panels (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL CHECK(length(name) > 0),
-            size INTEGER NOT NULL CHECK(size >= 12 AND size <= 42),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            // Enable foreign key constraints
+            db.run('PRAGMA foreign_keys = ON;');
+            
+            // Create tables with proper constraints
+            db.run(`CREATE TABLE IF NOT EXISTS panels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL CHECK(length(name) > 0),
+                size INTEGER NOT NULL CHECK(size >= 12 AND size <= 42),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS breakers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            panel_id INTEGER NOT NULL,
-            position INTEGER NOT NULL CHECK(position > 0),
-            slot_position TEXT DEFAULT 'single' CHECK(slot_position IN ('single', 'A', 'B')),
-            label TEXT,
-            amperage INTEGER CHECK(amperage > 0 AND amperage <= 200),
-            critical BOOLEAN DEFAULT 0,
-            monitor BOOLEAN DEFAULT 0,
-            confirmed BOOLEAN DEFAULT 0,
-            breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
-            UNIQUE(panel_id, position, slot_position)
-        )`);
+            db.run(`CREATE TABLE IF NOT EXISTS breakers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                panel_id INTEGER NOT NULL,
+                position INTEGER NOT NULL CHECK(position > 0),
+                slot_position TEXT DEFAULT 'single' CHECK(slot_position IN ('single', 'A', 'B')),
+                label TEXT,
+                amperage INTEGER CHECK(amperage > 0 AND amperage <= 200),
+                critical BOOLEAN DEFAULT 0,
+                monitor BOOLEAN DEFAULT 0,
+                confirmed BOOLEAN DEFAULT 0,
+                breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
+                UNIQUE(panel_id, position, slot_position)
+            )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS rooms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE CHECK(length(name) > 0),
-            level TEXT NOT NULL CHECK(level IN ('basement', 'main', 'upper', 'outside')),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+            db.run(`CREATE TABLE IF NOT EXISTS rooms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE CHECK(length(name) > 0),
+                level TEXT NOT NULL CHECK(level IN ('basement', 'main', 'upper', 'outside')),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS circuits (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            breaker_id INTEGER NOT NULL,
-            room_id INTEGER,
-            type TEXT CHECK(type IN ('outlet', 'lighting', 'heating', 'appliance', 'subpanel')),
-            notes TEXT,
-            subpanel_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (breaker_id) REFERENCES breakers (id) ON DELETE CASCADE,
-            FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
-            FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
-        )`);
+            db.run(`CREATE TABLE IF NOT EXISTS circuits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                breaker_id INTEGER NOT NULL,
+                room_id INTEGER,
+                type TEXT CHECK(type IN ('outlet', 'lighting', 'heating', 'appliance', 'subpanel')),
+                notes TEXT,
+                subpanel_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (breaker_id) REFERENCES breakers (id) ON DELETE CASCADE,
+                FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
+                FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
+            )`, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
     });
 };
 
@@ -121,18 +129,23 @@ app.use((req, res) => {
 const connectDB = () => {
     return new Promise((resolve, reject) => {
         const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
-        db = new sqlite3.Database(DB_PATH, (err) => {
+        db = new sqlite3.Database(DB_PATH, async (err) => {
             if (err) {
                 console.error('Error opening database:', err.message);
                 reject(err);
             } else {
                 console.log(`Connected to SQLite database: ${DB_PATH}`);
-                initializeDatabase();
-                
-                // Initialize database helpers for routes
-                setDbHelpers({ dbGet, dbAll, dbRun });
-                
-                resolve();
+                try {
+                    await initializeDatabase();
+                    
+                    // Initialize database helpers for routes
+                    setDbHelpers({ dbGet, dbAll, dbRun });
+                    
+                    resolve();
+                } catch (initErr) {
+                    console.error('Error initializing database:', initErr.message);
+                    reject(initErr);
+                }
             }
         });
     });

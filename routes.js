@@ -125,6 +125,8 @@ router.post('/breakers', validateBreakerData, asyncHandler(async (req, res) => {
     } catch (error) {
         if (error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'A breaker already exists at this position and slot' });
+        } else if (error.message.includes('FOREIGN KEY constraint failed')) {
+            return res.status(400).json({ error: 'Invalid panel_id - panel does not exist' });
         }
         throw error;
     }
@@ -263,12 +265,27 @@ router.post('/circuits', validateCircuitData, asyncHandler(async (req, res) => {
         subpanel_id: subpanel_id || null
     };
 
-    const result = await dbRun(
-        `INSERT INTO circuits (breaker_id, room_id, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)`,
-        [circuitData.breaker_id, circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id]
-    );
+    try {
+        const result = await dbRun(
+            `INSERT INTO circuits (breaker_id, room_id, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)`,
+            [circuitData.breaker_id, circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id]
+        );
 
-    res.status(201).json({ id: result.id, ...circuitData });
+        res.status(201).json({ id: result.id, ...circuitData });
+    } catch (error) {
+        if (error.message.includes('FOREIGN KEY constraint failed')) {
+            if (error.message.includes('breaker_id')) {
+                return res.status(400).json({ error: 'Invalid breaker_id - breaker does not exist' });
+            } else if (error.message.includes('room_id')) {
+                return res.status(400).json({ error: 'Invalid room_id - room does not exist' });
+            } else if (error.message.includes('subpanel_id')) {
+                return res.status(400).json({ error: 'Invalid subpanel_id - subpanel does not exist' });
+            } else {
+                return res.status(400).json({ error: 'Foreign key constraint violation' });
+            }
+        }
+        throw error;
+    }
 }));
 
 router.put('/circuits/:id', validateId(), validateCircuitData, asyncHandler(async (req, res) => {
