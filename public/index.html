@@ -188,6 +188,10 @@
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <h2 data-i18n="breakers.editBreaker">Edit Breaker</h2>
+                <div class="modal-top-actions">
+                    <button type="submit" form="breaker-form" data-i18n="app.save">Save</button>
+                    <button type="button" id="delete-breaker" class="delete-btn" data-i18n="breakers.deleteBreaker">Delete Breaker</button>
+                </div>
                 <form id="breaker-form">
                     <div class="form-group">
                         <label for="breaker-label" data-i18n="breakers.breakerLabel">Label:</label>
@@ -240,10 +244,6 @@
                     </div>
                     <button type="button" id="add-circuit" data-i18n="circuits.addCircuit">Add Circuit</button>
                     
-                    <div class="form-actions">
-                        <button type="submit" data-i18n="app.save">Save</button>
-                        <button type="button" id="cancel-edit" data-i18n="app.cancel">Cancel</button>
-                    </div>
                 </form>
             </div>
         </div>
