@@ -6,8 +6,6 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main, develop ]
-  pull_request_target:
-    types: [opened, synchronize, reopened]
 
 env:
   REGISTRY: ghcr.io
