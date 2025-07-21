@@ -6,7 +6,6 @@ const { router, setDbHelpers } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
 
 // Middleware
 app.use(cors());
@@ -21,6 +20,9 @@ let db;
 
 const initializeDatabase = () => {
     db.serialize(() => {
+        // Enable foreign key constraints
+        db.run('PRAGMA foreign_keys = ON;');
+        
         // Create tables with proper constraints
         db.run(`CREATE TABLE IF NOT EXISTS panels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +120,7 @@ app.use((req, res) => {
 // Database initialization and server startup
 const connectDB = () => {
     return new Promise((resolve, reject) => {
+        const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
         db = new sqlite3.Database(DB_PATH, (err) => {
             if (err) {
                 console.error('Error opening database:', err.message);

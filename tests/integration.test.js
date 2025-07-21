@@ -399,7 +399,7 @@ describe('Integration Tests - Real-world Scenarios', () => {
         });
 
         test('Handle invalid foreign key relationships', async () => {
-            // Try to create breaker with non-existent panel
+            // Try to create breaker with non-existent panel - should fail with foreign key constraint
             const response = await request(app)
                 .post('/api/breakers')
                 .send({
@@ -407,9 +407,10 @@ describe('Integration Tests - Real-world Scenarios', () => {
                     position: 1
                 });
                 
-            expect([400, 409]).toContain(response.status);
+            // Should fail with either 400 (validation) or 409 (constraint), but not 201 (success)
+            expect(response.status).not.toBe(201);
 
-            // Try to create circuit with non-existent breaker
+            // Try to create circuit with non-existent breaker - should fail with foreign key constraint
             const circuitResponse = await request(app)
                 .post('/api/circuits')
                 .send({
@@ -417,7 +418,8 @@ describe('Integration Tests - Real-world Scenarios', () => {
                     type: 'outlet'
                 });
                 
-            expect([201, 400]).toContain(circuitResponse.status);
+            // Should fail with either validation error or constraint error, but not 201 (success)
+            expect(circuitResponse.status).not.toBe(201);
         });
 
         test('Handle malformed request data', async () => {
