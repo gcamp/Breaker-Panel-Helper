@@ -13,26 +13,39 @@ const testData = {
         { name: 'Garage Subpanel', size: 20 },
         { name: 'Workshop Subpanel', size: 12 }
     ],
+    rooms: [
+        { name: 'Kitchen', level: 'main' },
+        { name: 'Living Room', level: 'main' },
+        { name: 'Dining Room', level: 'main' },
+        { name: 'Utility Room', level: 'basement' },
+        { name: 'Master Bedroom', level: 'upper' },
+        { name: 'Guest Bedroom', level: 'upper' },
+        { name: 'Master Bathroom', level: 'upper' },
+        { name: 'Guest Bathroom', level: 'main' },
+        { name: 'Garage', level: 'main' },
+        { name: 'Workshop', level: 'basement' },
+        { name: 'Exterior', level: 'outside' }
+    ],
     breakers: [
         // Main Panel breakers
-        { panel_name: 'Main Panel', position: 1, label: 'Kitchen Outlets', amperage: 20, critical: false, monitor: false, double_pole: false },
-        { panel_name: 'Main Panel', position: 2, label: 'Living Room Lights', amperage: 15, critical: false, monitor: false, double_pole: false },
-        { panel_name: 'Main Panel', position: 3, label: 'Central AC Unit', amperage: 40, critical: true, monitor: true, double_pole: true },
-        { panel_name: 'Main Panel', position: 5, label: 'Water Heater', amperage: 30, critical: false, monitor: true, double_pole: false },
-        { panel_name: 'Main Panel', position: 6, label: 'Bedroom Outlets', amperage: 20, critical: false, monitor: false, double_pole: false },
-        { panel_name: 'Main Panel', position: 7, label: 'Garage Subpanel Feed', amperage: 60, critical: true, monitor: false, double_pole: true },
-        { panel_name: 'Main Panel', position: 9, label: 'Bathroom GFCI', amperage: 20, critical: false, monitor: true, double_pole: false },
-        { panel_name: 'Main Panel', position: 10, label: 'Outdoor Lighting', amperage: 15, critical: false, monitor: false, double_pole: false },
+        { panel_name: 'Main Panel', position: 1, label: 'Kitchen Outlets', amperage: 20, critical: false, monitor: false, breaker_type: 'single' },
+        { panel_name: 'Main Panel', position: 2, label: 'Living Room Lights', amperage: 15, critical: false, monitor: false, breaker_type: 'single' },
+        { panel_name: 'Main Panel', position: 3, label: 'Central AC Unit', amperage: 40, critical: true, monitor: true, breaker_type: 'double_pole' },
+        { panel_name: 'Main Panel', position: 5, label: 'Water Heater', amperage: 30, critical: false, monitor: true, breaker_type: 'single' },
+        { panel_name: 'Main Panel', position: 6, label: 'Bedroom Outlets', amperage: 20, critical: false, monitor: false, breaker_type: 'single' },
+        { panel_name: 'Main Panel', position: 7, label: 'Garage Subpanel Feed', amperage: 60, critical: true, monitor: false, breaker_type: 'double_pole' },
+        { panel_name: 'Main Panel', position: 9, label: 'Bathroom GFCI', amperage: 20, critical: false, monitor: true, breaker_type: 'single' },
+        { panel_name: 'Main Panel', position: 10, label: 'Outdoor Lighting', amperage: 15, critical: false, monitor: false, breaker_type: 'single' },
         
         // Garage Subpanel breakers
-        { panel_name: 'Garage Subpanel', position: 1, label: 'Garage Door Opener', amperage: 15, critical: false, monitor: true, double_pole: false },
-        { panel_name: 'Garage Subpanel', position: 2, label: 'Workshop Outlets', amperage: 20, critical: false, monitor: false, double_pole: false },
-        { panel_name: 'Garage Subpanel', position: 3, label: 'EV Charger', amperage: 50, critical: false, monitor: true, double_pole: true },
-        { panel_name: 'Garage Subpanel', position: 5, label: 'Workshop Subpanel Feed', amperage: 30, critical: false, monitor: false, double_pole: false },
+        { panel_name: 'Garage Subpanel', position: 1, label: 'Garage Door Opener', amperage: 15, critical: false, monitor: true, breaker_type: 'single' },
+        { panel_name: 'Garage Subpanel', position: 2, label: 'Workshop Outlets', amperage: 20, critical: false, monitor: false, breaker_type: 'single' },
+        { panel_name: 'Garage Subpanel', position: 3, label: 'EV Charger', amperage: 50, critical: false, monitor: true, breaker_type: 'double_pole' },
+        { panel_name: 'Garage Subpanel', position: 5, label: 'Workshop Subpanel Feed', amperage: 30, critical: false, monitor: false, breaker_type: 'single' },
         
         // Workshop Subpanel breakers
-        { panel_name: 'Workshop Subpanel', position: 1, label: 'Table Saw', amperage: 20, critical: false, monitor: false, double_pole: false },
-        { panel_name: 'Workshop Subpanel', position: 2, label: 'Dust Collection', amperage: 15, critical: false, monitor: false, double_pole: false }
+        { panel_name: 'Workshop Subpanel', position: 1, label: 'Table Saw', amperage: 20, critical: false, monitor: false, breaker_type: 'single' },
+        { panel_name: 'Workshop Subpanel', position: 2, label: 'Dust Collection', amperage: 15, critical: false, monitor: false, breaker_type: 'single' }
     ],
     circuits: [
         // Kitchen Outlets circuits
@@ -76,6 +89,7 @@ const testData = {
 };
 
 let panelIds = {};
+let roomIds = {};
 let breakerIds = {};
 
 // Helper function to run async database operations
@@ -112,25 +126,36 @@ async function addTestData() {
         await runQuery(`CREATE TABLE IF NOT EXISTS breakers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             panel_id INTEGER NOT NULL,
-            position INTEGER NOT NULL,
+            position INTEGER NOT NULL CHECK(position > 0),
+            slot_position TEXT DEFAULT 'single' CHECK(slot_position IN ('single', 'A', 'B')),
             label TEXT,
-            amperage INTEGER,
+            amperage INTEGER CHECK(amperage > 0 AND amperage <= 200),
             critical BOOLEAN DEFAULT 0,
             monitor BOOLEAN DEFAULT 0,
-            double_pole BOOLEAN DEFAULT 0,
+            confirmed BOOLEAN DEFAULT 0,
+            breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE
+            FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
+            UNIQUE(panel_id, position, slot_position)
+        )`);
+
+        await runQuery(`CREATE TABLE IF NOT EXISTS rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE CHECK(length(name) > 0),
+            level TEXT NOT NULL CHECK(level IN ('basement', 'main', 'upper', 'outside')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
         await runQuery(`CREATE TABLE IF NOT EXISTS circuits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             breaker_id INTEGER NOT NULL,
-            room TEXT,
+            room_id INTEGER,
             type TEXT CHECK(type IN ('outlet', 'lighting', 'heating', 'appliance', 'subpanel')),
             notes TEXT,
             subpanel_id INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (breaker_id) REFERENCES breakers (id) ON DELETE CASCADE,
+            FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
             FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
         )`);
         
@@ -146,14 +171,26 @@ async function addTestData() {
             console.log(`✅ Created panel: ${panel.name} (ID: ${result.id})`);
         }
         
+        console.log('🏠 Creating test rooms...');
+        
+        // Add rooms
+        for (const room of testData.rooms) {
+            const result = await runQuery(
+                'INSERT INTO rooms (name, level) VALUES (?, ?)', 
+                [room.name, room.level]
+            );
+            roomIds[room.name] = result.id;
+            console.log(`✅ Created room: ${room.name} (Level: ${room.level})`);
+        }
+        
         console.log('🔌 Creating test breakers...');
         
         // Add breakers
         for (const breaker of testData.breakers) {
             const panelId = panelIds[breaker.panel_name];
             const result = await runQuery(
-                'INSERT INTO breakers (panel_id, position, label, amperage, critical, monitor, double_pole) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [panelId, breaker.position, breaker.label, breaker.amperage, breaker.critical, breaker.monitor, breaker.double_pole]
+                'INSERT INTO breakers (panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, slot_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [panelId, breaker.position, breaker.label, breaker.amperage, breaker.critical, breaker.monitor, true, breaker.breaker_type, 'single']
             );
             breakerIds[breaker.label] = result.id;
             console.log(`✅ Created breaker: ${breaker.label} (Position ${breaker.position})`);
@@ -170,9 +207,10 @@ async function addTestData() {
                 subpanelId = panelIds[circuit.subpanel_name];
             }
             
+            const roomId = roomIds[circuit.room];
             await runQuery(
-                'INSERT INTO circuits (breaker_id, room, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)',
-                [breakerId, circuit.room, circuit.type, circuit.notes, subpanelId]
+                'INSERT INTO circuits (breaker_id, room_id, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)',
+                [breakerId, roomId, circuit.type, circuit.notes, subpanelId]
             );
             console.log(`✅ Created circuit: ${circuit.room} - ${circuit.type}`);
         }
