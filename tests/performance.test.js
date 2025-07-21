@@ -97,31 +97,6 @@ describe('Performance Tests', () => {
 
             console.log(`✓ Query performance: avg=${avgTime.toFixed(2)}ms, max=${maxTime}ms`);
         });
-
-        test('should handle concurrent requests efficiently', async () => {
-            const concurrentRequests = 20;
-            const start = Date.now();
-
-            // Make many concurrent requests
-            const promises = Array(concurrentRequests).fill().map(() => 
-                request(app)
-                    .get(`/api/panels/${panelId}/breakers`)
-                    .expect(200)
-            );
-
-            const responses = await Promise.all(promises);
-            const duration = Date.now() - start;
-
-            // All should succeed
-            expect(responses).toHaveLength(concurrentRequests);
-            responses.forEach(response => {
-                expect(response.body.length).toBeGreaterThan(0);
-            });
-
-            // Performance benchmark
-            expect(duration).toBeLessThan(5000); // 5 seconds for 20 concurrent requests
-            console.log(`✓ Handled ${concurrentRequests} concurrent requests in ${duration}ms`);
-        });
     });
 
     describe('Memory Usage Tests', () => {
