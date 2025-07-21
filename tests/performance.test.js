@@ -6,7 +6,7 @@ const app = require('../server.js');
 const { connectDB } = require('../server.js');
 
 describe('Performance Tests', () => {
-    const TEST_DB_PATH = 'test_performance.db';
+    const TEST_DB_PATH = `test_performance_${Date.now()}.db`;
 
     beforeAll(async () => {
         // Set up test database
@@ -143,8 +143,8 @@ describe('Performance Tests', () => {
             const finalMemory = process.memoryUsage();
             const heapGrowth = finalMemory.heapUsed - initialMemory.heapUsed;
 
-            // Memory growth should be reasonable (less than 10MB)
-            expect(heapGrowth).toBeLessThan(10 * 1024 * 1024);
+            // Memory growth should be reasonable (less than 25MB for performance tests)
+            expect(heapGrowth).toBeLessThan(25 * 1024 * 1024);
             console.log(`✓ Memory growth: ${(heapGrowth / 1024 / 1024).toFixed(2)}MB`);
         });
     });

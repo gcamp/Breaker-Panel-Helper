@@ -264,14 +264,20 @@ class ApiClient {
 
     // Basic client-side validation - server handles comprehensive validation
     validatePanelData(data) {
-        if (!data.name?.trim()) throw new Error('Panel name is required');
+        if (!data.name?.trim()) throw new Error('Name is required');
         if (!data.size) throw new Error('Panel size is required');
+        if (data.size && (data.size < 12 || data.size > 42)) {
+            throw new Error('Size must be a number between 12 and 42');
+        }
     }
 
     validateBreakerData(data, requireAll = true) {
         if (requireAll) {
             if (!this.isValidId(data.panel_id)) throw new Error('Valid panel ID is required');
             if (!this.isValidPosition(data.position)) throw new Error('Valid position is required');
+        }
+        if (data.amperage && (data.amperage < 1 || data.amperage > 200)) {
+            throw new Error('Amperage must be between 1 and 200');
         }
     }
 

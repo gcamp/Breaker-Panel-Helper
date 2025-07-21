@@ -30,7 +30,8 @@
       "Bash(npm run lint:*)",
       "Bash(npm test:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
