@@ -106,7 +106,7 @@ jobs:
         curl -f http://localhost:3000 || exit 1
 
     - name: Run backend tests
-      run: npm test -- --grep "server|api|backend" --if-present
+      run: npm run test:api
 
   test-frontend:
     name: Test Frontend Changes
@@ -136,7 +136,7 @@ jobs:
         grep -r "require\|import" public/ || true
 
     - name: Run frontend tests
-      run: npm test -- --grep "frontend|ui|client" --if-present
+      run: npm run test:frontend
 
   lint-and-format:
     name: Lint and Format Check
@@ -336,52 +336,6 @@ jobs:
         
         # Cleanup
         docker stop test-container
-
-  deploy-docs:
-    name: Deploy Documentation
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: '.node-version'
-
-    - name: Generate deployment docs
-      run: |
-        mkdir -p docs
-        cp DEPLOYMENT.md docs/
-        cp CLAUDE.md docs/
-        
-        # Create index page
-        cat > docs/index.md << 'EOF'
-        # Breaker Panel Helper Documentation
-        
-        ## Quick Links
-        - [Deployment Guide](DEPLOYMENT.md)
-        - [Architecture & Development](CLAUDE.md)
-        
-        ## Docker Image
-        ```bash
-        docker pull ghcr.io/${{ github.repository }}:latest
-        ```
-        
-        ## Latest Release
-        ![Docker Image Version](https://ghcr-badge.egpl.dev/${{ github.repository }}/latest_by_date)
-        ![Docker Image Size](https://ghcr-badge.egpl.dev/${{ github.repository }}/size)
-        EOF
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/main'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
 
   create-release:
     name: Create GitHub Release
