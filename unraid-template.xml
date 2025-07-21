@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Breaker-Panel-Helper</Name>
-  <Repository>ghcr.io/your-username/breaker-panel-helper:latest</Repository>
+  <Repository>ghcr.io/gcamp/breaker-panel-helper:latest</Repository>
   <Registry/>
   <Network>bridge</Network>
   <MyIP/>
@@ -13,7 +13,6 @@
   <Category>Tools: Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/selfhosters/unRAID-CA-templates/master/templates/img/database.png</Icon>
   <ExtraParams>--restart=unless-stopped</ExtraParams>
   <PostArgs/>
   <CPUset/>
