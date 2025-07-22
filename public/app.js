@@ -86,12 +86,7 @@ class BreakerPanelApp {
     }
 
     bindElement(id, event, handler) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener(event, handler);
-        } else {
-            console.warn(`Element with ID '${id}' not found`);
-        }
+        UIStateUtils.bindElement(id, event, handler);
     }
 
     setupGlobalListeners() {
@@ -167,34 +162,13 @@ class BreakerPanelApp {
         );
         
         // Sort: main panels first, then subpanels
-        this.allPanels = panels.sort((a, b) => {
-            const aIsMain = !subpanelIds.has(a.id);
-            const bIsMain = !subpanelIds.has(b.id);
-            
-            if (aIsMain && !bIsMain) return -1;
-            if (!aIsMain && bIsMain) return 1;
-            return a.name.localeCompare(b.name);
-        });
+        this.allPanels = PanelUtils.sortPanelsMainFirst(panels, circuits);
         
         await this.populatePanelSelector();
     }
 
     async createPanelOptions(panels, circuits) {
-        const subpanelIds = new Set(
-            circuits
-                .filter(circuit => circuit.type === 'subpanel' && circuit.subpanel_id)
-                .map(circuit => circuit.subpanel_id)
-        );
-        
-        return panels.map(panel => {
-            const isMain = !subpanelIds.has(panel.id);
-            const prefix = isMain ? '🏠 ' : '⚡ ';
-            return {
-                value: panel.id,
-                text: prefix + panel.name,
-                panel
-            };
-        });
+        return PanelUtils.createPanelOptions(panels, circuits);
     }
 
     async populatePanelSelector() {
@@ -227,10 +201,7 @@ class BreakerPanelApp {
     }
 
     updateElementState(id, property, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element[property] = value;
-        }
+        UIStateUtils.updateElementState(id, property, value);
     }
 
     async createDefaultPanel() {
@@ -258,13 +229,11 @@ class BreakerPanelApp {
     }
 
     showModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) modal.style.display = 'block';
+        ModalUtils.showModal(modalId);
     }
 
     hideModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) modal.style.display = 'none';
+        ModalUtils.hideModal(modalId);
     }
 
     async createNewPanel(e) {
@@ -381,8 +350,7 @@ class BreakerPanelApp {
     }
 
     setActiveButton(buttonId) {
-        const button = document.getElementById(buttonId);
-        if (button) button.classList.add('active');
+        UIStateUtils.setActiveButton(buttonId);
     }
 
     isCircuitListVisible() {
@@ -395,19 +363,15 @@ class BreakerPanelApp {
     // ============================================================================
 
     handleError(message, error) {
-        console.error(message + ':', error);
-        const userMessage = error.message || 'An unexpected error occurred';
-        alert(`${message}: ${userMessage}`);
+        ErrorUtils.handleError('BreakerPanelApp', message, error);
     }
 
     showSuccess(message) {
-        console.log('Success:', message);
-        alert(message);
+        ErrorUtils.showSuccess(message);
     }
 
     showNotification(message) {
-        console.log('Notification:', message);
-        alert(message);
+        ErrorUtils.showNotification(message);
     }
 
     // ============================================================================
@@ -897,11 +861,7 @@ class BreakerPanelApp {
             return;
         }
 
-        const roomsByLevel = this.allRooms.reduce((acc, room) => {
-            if (!acc[room.level]) acc[room.level] = [];
-            acc[room.level].push(room);
-            return acc;
-        }, {});
+        const roomsByLevel = CollectionUtils.groupBy(this.allRooms, room => room.level);
 
         const levelOrder = ['upper', 'main', 'basement', 'outside'];
         const levelColors = {

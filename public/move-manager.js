@@ -83,7 +83,7 @@ class MoveManager {
             
             destinationSelect.innerHTML = '<option value="">Select destination panel...</option>';
             
-            const panelOptions = await this.app.createPanelOptions(panels, circuits);
+            const panelOptions = PanelUtils.createPanelOptions(panels, circuits);
             panelOptions.forEach(({ value, text }) => {
                 const option = document.createElement('option');
                 option.value = value;

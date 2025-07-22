@@ -248,11 +248,11 @@ class ApiClient {
 
     // Validation helpers
     isValidId(id) {
-        return Number.isInteger(id) && id > 0;
+        return ValidationUtils.isValidId(id);
     }
 
     isValidPosition(position) {
-        return Number.isInteger(position) && position > 0;
+        return ValidationUtils.isValidPosition(position);
     }
 
     // Basic client-side validation - server handles comprehensive validation

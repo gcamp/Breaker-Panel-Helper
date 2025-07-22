@@ -303,12 +303,7 @@ class PanelRenderer {
 
     generateAutoLabel(circuits) {
         // Group circuits by type
-        const circuitsByType = circuits.reduce((acc, circuit) => {
-            const type = circuit.type || 'other';
-            if (!acc[type]) acc[type] = [];
-            acc[type].push(circuit);
-            return acc;
-        }, {});
+        const circuitsByType = CollectionUtils.groupBy(circuits, circuit => circuit.type || 'other');
 
         const labelParts = [];
 
@@ -358,7 +353,7 @@ class PanelRenderer {
                 const rooms = circuitsByType[type].map(circuit => 
                     circuit.room && circuit.room.trim() ? circuit.room.trim() : 'General'
                 );
-                const uniqueRooms = [...new Set(rooms)];
+                const uniqueRooms = CollectionUtils.uniqueValues(rooms);
                 
                 if (uniqueRooms.length > 0) {
                     typeGroups[type] = uniqueRooms;
@@ -527,13 +522,7 @@ class PanelRenderer {
 
     setFormValue(id, value) {
         const element = document.getElementById(id);
-        if (element) {
-            if (element.type === 'checkbox') {
-                element.checked = Boolean(value);
-            } else {
-                element.value = value;
-            }
-        }
+        FormUtils.setFormValue(element, value);
     }
 
     async loadCircuits() {

@@ -54,10 +54,10 @@ class CircuitListManager {
         const roomFilter = document.getElementById('room-filter');
         if (!roomFilter) return;
         
-        const rooms = [...new Set(this.app.allCircuitData
-            .map(item => item.circuit.room)
-            .filter(room => room && room.trim() !== '')
-        )].sort();
+        const rooms = CollectionUtils.uniqueValues(
+            this.app.allCircuitData.map(item => item.circuit.room),
+            room => room && room.trim() !== '' ? room : null
+        ).filter(room => room !== null).sort();
         
         roomFilter.innerHTML = `<option value="">${window.i18n.t('circuitList.allRooms')}</option>`;
         
@@ -92,13 +92,11 @@ class CircuitListManager {
     }
 
     getElementValue(id, defaultValue = '') {
-        const element = document.getElementById(id);
-        return element ? element.value : defaultValue;
+        return DOMUtils.getElementValue(id, defaultValue);
     }
 
     getElementChecked(id) {
-        const element = document.getElementById(id);
-        return element ? element.checked : false;
+        return DOMUtils.getElementChecked(id);
     }
 
     filterCircuitData(filters) {
@@ -310,13 +308,11 @@ class CircuitListManager {
     }
 
     setElementValue(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.value = value;
+        DOMUtils.setElementValue(id, value);
     }
 
     setElementChecked(id, checked) {
-        const element = document.getElementById(id);
-        if (element) element.checked = checked;
+        DOMUtils.setElementChecked(id, checked);
     }
 
     // ============================================================================
