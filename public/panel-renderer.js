@@ -438,21 +438,21 @@ class PanelRenderer {
         if (breaker.critical) {
             const criticalIndicator = document.createElement('div');
             criticalIndicator.className = 'indicator critical';
-            criticalIndicator.title = window.i18n.t('breakers.criticalCircuit');
+            criticalIndicator.title = 'Critical Circuit';
             indicators.appendChild(criticalIndicator);
         }
         
         if (breaker.monitor) {
             const monitorIndicator = document.createElement('div');
             monitorIndicator.className = 'indicator monitor';
-            monitorIndicator.title = window.i18n.t('breakers.shouldMonitor');
+            monitorIndicator.title = 'Should Monitor';
             indicators.appendChild(monitorIndicator);
         }
         
         if (breaker.confirmed) {
             const confirmedIndicator = document.createElement('div');
             confirmedIndicator.className = 'indicator confirmed';
-            confirmedIndicator.title = window.i18n.t('breakers.testedConfirmed');
+            confirmedIndicator.title = 'Tested & Confirmed';
             indicators.appendChild(confirmedIndicator);
         }
     }
@@ -516,7 +516,7 @@ class PanelRenderer {
             if (isTandemB) {
                 breakerTypeSelect.style.opacity = '0.6';
                 breakerTypeSelect.style.cursor = 'not-allowed';
-                breakerTypeSelect.title = window.i18n.t('breakers.tandemBDisabled');
+                breakerTypeSelect.title = 'Tandem B slot is disabled when A is empty';
             } else {
                 breakerTypeSelect.style.opacity = '';
                 breakerTypeSelect.style.cursor = '';
@@ -576,42 +576,42 @@ class PanelRenderer {
     generateCircuitFormHTML(circuitData) {
         return `
             <div class="circuit-header">
-                <div class="circuit-title">${window.i18n.t('circuits.circuitNumber')} ${this.app.circuitCounter}</div>
+                <div class="circuit-title">Circuit ${this.app.circuitCounter}</div>
                 <div class="circuit-actions">
-                    <button type="button" class="remove-circuit">${window.i18n.t('circuits.removeCircuit')}</button>
+                    <button type="button" class="remove-circuit">Remove Circuit</button>
                 </div>
             </div>
             <div class="circuit-form">
                 <div class="form-group">
-                    <label>${window.i18n.t('circuits.room')}</label>
+                    <label>Room</label>
                     <select name="room">
-                        <option value="">${window.i18n.t('circuits.selectRoom')}</option>
+                        <option value="">Select room...</option>
                         ${this.generateRoomOptions(circuitData?.room_id)}
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>${window.i18n.t('circuits.type')}</label>
+                    <label>Type</label>
                     <select name="type">
-                        <option value="outlet" ${!circuitData?.type || circuitData?.type === 'outlet' ? 'selected' : ''}>${window.i18n.t('circuits.types.outlet')}</option>
-                        <option value="lighting" ${circuitData?.type === 'lighting' ? 'selected' : ''}>${window.i18n.t('circuits.types.lighting')}</option>
-                        <option value="heating" ${circuitData?.type === 'heating' ? 'selected' : ''}>${window.i18n.t('circuits.types.heating')}</option>
-                        <option value="appliance" ${circuitData?.type === 'appliance' ? 'selected' : ''}>${window.i18n.t('circuits.types.appliance')}</option>
-                        <option value="subpanel" ${circuitData?.type === 'subpanel' ? 'selected' : ''}>${window.i18n.t('circuits.types.subpanel')}</option>
+                        <option value="outlet" ${!circuitData?.type || circuitData?.type === 'outlet' ? 'selected' : ''}>🔵 Outlet</option>
+                        <option value="lighting" ${circuitData?.type === 'lighting' ? 'selected' : ''}>🟠 Lighting</option>
+                        <option value="heating" ${circuitData?.type === 'heating' ? 'selected' : ''}>🔴 Heating</option>
+                        <option value="appliance" ${circuitData?.type === 'appliance' ? 'selected' : ''}>🟢 Appliance</option>
+                        <option value="subpanel" ${circuitData?.type === 'subpanel' ? 'selected' : ''}>🟣 Subpanel</option>
                     </select>
                 </div>
                 <div class="form-group subpanel-selector" style="display: ${circuitData?.type === 'subpanel' ? 'block' : 'none'};">
-                    <label>${window.i18n.t('circuits.linkedPanel')}</label>
+                    <label>Linked Panel</label>
                     <div class="subpanel-controls">
                         <select name="subpanel">
-                            <option value="">${window.i18n.t('circuits.selectPanel')}</option>
+                            <option value="">Select panel...</option>
                             ${this.generateSubpanelOptions(circuitData?.subpanel_id)}
                         </select>
-                        ${circuitData?.subpanel_id ? `<button type="button" class="goto-panel" data-panel-id="${circuitData.subpanel_id}">${window.i18n.t('circuits.goToPanel')}</button>` : ''}
+                        ${circuitData?.subpanel_id ? `<button type="button" class="goto-panel" data-panel-id="${circuitData.subpanel_id}">Go to Panel</button>` : ''}
                     </div>
                 </div>
                 <div class="form-group circuit-notes">
-                    <label>${window.i18n.t('circuits.notes')}</label>
-                    <textarea name="notes" placeholder="${window.i18n.t('circuits.additionalNotes')}">${circuitData?.notes || ''}</textarea>
+                    <label>Notes</label>
+                    <textarea name="notes" placeholder="Additional notes...">${circuitData?.notes || ''}</textarea>
                 </div>
             </div>
         `;
@@ -684,7 +684,7 @@ class PanelRenderer {
         const position = this.app.currentBreaker.position;
         
         if (breakerType === 'double_pole' && position > this.app.currentPanel.size - 2) {
-            alert(window.i18n.t('breakers.cannotCreateDoublePole'));
+            alert('Cannot create a double pole breaker at this position. Double pole breakers must start on an odd position and extend to the next even position.');
             e.target.value = 'single';
             return;
         }

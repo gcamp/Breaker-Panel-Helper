@@ -449,8 +449,8 @@ describe('Frontend Unit Tests', () => {
             expect(row.innerHTML).toContain('outlet');
             expect(row.innerHTML).toContain('Test notes');
             expect(row.innerHTML).toContain('20A');
-            expect(row.innerHTML).toContain('CRITICAL');
-            expect(row.innerHTML).toContain('CONFIRMED');
+            expect(row.innerHTML).toContain('Critical');
+            expect(row.innerHTML).toContain('Confirmed');
         });
 
         test('should create circuit row for tandem breaker', () => {
