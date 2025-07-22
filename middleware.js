@@ -1,7 +1,4 @@
-// Error handling middleware
-const asyncHandler = (fn) => (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-};
+// Note: asyncHandler moved to ErrorHandler utility class
 
 const validateId = (paramName = 'id') => (req, res, next) => {
     const id = parseInt(req.params[paramName]);
@@ -80,7 +77,6 @@ const validateCircuitData = (req, res, next) => {
 };
 
 module.exports = {
-    asyncHandler,
     validateId,
     validatePanelData,
     validateBreakerData,

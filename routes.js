@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const ErrorHandler = require('./services/error-handler');
 
 // Import validation middleware
 const {
@@ -7,113 +8,106 @@ const {
     validatePanelData,
     validateBreakerData,
     validateRoomData,
-    validateCircuitData,
-    asyncHandler
+    validateCircuitData
 } = require('./middleware');
 
-// Database helper functions will be injected
-let dbGet, dbAll, dbRun;
+// Database service will be injected
+let databaseService;
 
-const setDbHelpers = (helpers) => {
-    dbGet = helpers.dbGet;
-    dbAll = helpers.dbAll;
-    dbRun = helpers.dbRun;
+const setDatabaseService = (service) => {
+    databaseService = service;
 };
 
 // Panel routes
-router.get('/panels', asyncHandler(async (req, res) => {
-    const panels = await dbAll('SELECT * FROM panels ORDER BY created_at DESC');
+router.get('/panels', ErrorHandler.asyncHandler(async (req, res) => {
+    const panels = await databaseService.all('SELECT * FROM panels ORDER BY created_at DESC');
     res.json(panels);
 }));
 
-router.get('/panels/:id', validateId(), asyncHandler(async (req, res) => {
-    const panel = await dbGet('SELECT * FROM panels WHERE id = ?', [req.params.id]);
+router.get('/panels/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const panel = await databaseService.get('SELECT * FROM panels WHERE id = ?', [req.params.id]);
     if (!panel) {
-        return res.status(404).json({ error: 'Panel not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Panel');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json(panel);
 }));
 
-router.post('/panels', validatePanelData, asyncHandler(async (req, res) => {
+router.post('/panels', validatePanelData, ErrorHandler.asyncHandler(async (req, res) => {
     const { name, size } = req.body;
-    const result = await dbRun('INSERT INTO panels (name, size) VALUES (?, ?)', [name.trim(), size]);
-    res.status(201).json({ id: result.id, name: name.trim(), size });
-}));
-
-router.put('/panels/:id', validateId(), validatePanelData, asyncHandler(async (req, res) => {
-    const { name, size } = req.body;
-    const result = await dbRun('UPDATE panels SET name = ?, size = ? WHERE id = ?', [name.trim(), size, req.params.id]);
-    if (result.changes === 0) {
-        return res.status(404).json({ error: 'Panel not found' });
+    try {
+        const result = await databaseService.run('INSERT INTO panels (name, size) VALUES (?, ?)', [name.trim(), size]);
+        res.status(201).json({ id: result.id, name: name.trim(), size });
+    } catch (error) {
+        const errorInfo = ErrorHandler.handleDatabaseError(error);
+        ErrorHandler.sendError(res, errorInfo);
     }
-    res.json({ id: req.params.id, name: name.trim(), size });
 }));
 
-router.delete('/panels/:id', validateId(), asyncHandler(async (req, res) => {
-    const result = await dbRun('DELETE FROM panels WHERE id = ?', [req.params.id]);
+router.put('/panels/:id', validateId(), validatePanelData, ErrorHandler.asyncHandler(async (req, res) => {
+    const { name, size } = req.body;
+    try {
+        const result = await databaseService.run('UPDATE panels SET name = ?, size = ? WHERE id = ?', [name.trim(), size, req.params.id]);
+        if (result.changes === 0) {
+            const errorInfo = ErrorHandler.handleNotFoundError('Panel');
+            return ErrorHandler.sendError(res, errorInfo);
+        }
+        res.json({ id: req.params.id, name: name.trim(), size });
+    } catch (error) {
+        const errorInfo = ErrorHandler.handleDatabaseError(error);
+        ErrorHandler.sendError(res, errorInfo);
+    }
+}));
+
+router.delete('/panels/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const result = await databaseService.run('DELETE FROM panels WHERE id = ?', [req.params.id]);
     if (result.changes === 0) {
-        return res.status(404).json({ error: 'Panel not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Panel');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json({ message: 'Panel deleted successfully' });
 }));
 
 // Breaker routes
-router.get('/panels/:panelId/breakers', validateId('panelId'), asyncHandler(async (req, res) => {
-    const breakers = await dbAll('SELECT * FROM breakers WHERE panel_id = ? ORDER BY position', [req.params.panelId]);
+router.get('/panels/:panelId/breakers', validateId('panelId'), ErrorHandler.asyncHandler(async (req, res) => {
+    const breakers = await databaseService.all('SELECT * FROM breakers WHERE panel_id = ? ORDER BY position', [req.params.panelId]);
     res.json(breakers);
 }));
 
-router.get('/breakers/:id', validateId(), asyncHandler(async (req, res) => {
-    const breaker = await dbGet('SELECT * FROM breakers WHERE id = ?', [req.params.id]);
+router.get('/breakers/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const breaker = await databaseService.get('SELECT * FROM breakers WHERE id = ?', [req.params.id]);
     if (!breaker) {
-        return res.status(404).json({ error: 'Breaker not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Breaker');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json(breaker);
 }));
 
-router.get('/panels/:panelId/breakers/position/:position', asyncHandler(async (req, res) => {
+router.get('/panels/:panelId/breakers/position/:position', ErrorHandler.asyncHandler(async (req, res) => {
     const panelId = parseInt(req.params.panelId);
     const position = parseInt(req.params.position);
     const slotPosition = req.query.slot_position || 'single';
     
     if (isNaN(panelId) || isNaN(position) || panelId <= 0 || position <= 0) {
-        return res.status(400).json({ error: 'Invalid panel ID or position' });
+        const errorInfo = ErrorHandler.handleValidationError('Invalid panel ID or position');
+        return ErrorHandler.sendError(res, errorInfo);
     }
 
     // For tandem breakers, we might need to get both A and B breakers
     if (slotPosition === 'both') {
-        const breakers = await dbAll('SELECT * FROM breakers WHERE panel_id = ? AND position = ? ORDER BY slot_position', [panelId, position]);
+        const breakers = await databaseService.all('SELECT * FROM breakers WHERE panel_id = ? AND position = ? ORDER BY slot_position', [panelId, position]);
         res.json(breakers || []);
     } else {
-        const breaker = await dbGet('SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', [panelId, position, slotPosition]);
+        const breaker = await databaseService.get('SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', [panelId, position, slotPosition]);
         res.json(breaker || null);
     }
 }));
 
-router.post('/breakers', validateBreakerData, asyncHandler(async (req, res) => {
-    const { panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, slot_position } = req.body;
-    
-    // For tandem breakers, ensure slot_position is set appropriately
-    let finalSlotPosition = slot_position || 'single';
-    let finalBreakerType = breaker_type || 'single';
-    if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
-        finalSlotPosition = 'A';
-    }
-
-    const breakerData = {
-        panel_id,
-        position,
-        label: label?.trim() || null,
-        amperage: amperage || null,
-        critical: Boolean(critical),
-        monitor: Boolean(monitor),
-        confirmed: Boolean(confirmed),
-        breaker_type: finalBreakerType,
-        slot_position: finalSlotPosition
-    };
+router.post('/breakers', validateBreakerData, ErrorHandler.asyncHandler(async (req, res) => {
+    const breakerData = ErrorHandler.processBreakerData(req.body, 'create');
 
     try {
-        const result = await dbRun(
+        const result = await databaseService.run(
             `INSERT INTO breakers (panel_id, position, label, amperage, critical, monitor, confirmed, breaker_type, slot_position) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [breakerData.panel_id, breakerData.position, breakerData.label, breakerData.amperage, 
@@ -123,64 +117,43 @@ router.post('/breakers', validateBreakerData, asyncHandler(async (req, res) => {
         
         res.status(201).json({ id: result.id, ...breakerData });
     } catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'A breaker already exists at this position and slot' });
-        } else if (error.message.includes('FOREIGN KEY constraint failed')) {
-            return res.status(400).json({ error: 'Invalid panel_id - panel does not exist' });
-        }
-        throw error;
+        const errorInfo = ErrorHandler.handleDatabaseError(error, { field: 'panel_id' });
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
-router.put('/breakers/:id', validateId(), validateBreakerData, asyncHandler(async (req, res) => {
-    const { label, amperage, critical, monitor, confirmed, breaker_type, slot_position } = req.body;
-
-    // For tandem breakers, ensure slot_position is set appropriately
-    let finalSlotPosition = slot_position || 'single';
-    let finalBreakerType = breaker_type || 'single';
-    if (finalBreakerType === 'tandem' && finalSlotPosition === 'single') {
-        finalSlotPosition = 'A'; // Default to A for tandem breakers
-    }
-
-    const breakerData = {
-        label: label?.trim() || null,
-        amperage: amperage || null,
-        critical: Boolean(critical),
-        monitor: Boolean(monitor),
-        confirmed: Boolean(confirmed),
-        breaker_type: finalBreakerType,
-        slot_position: finalSlotPosition
-    };
+router.put('/breakers/:id', validateId(), validateBreakerData, ErrorHandler.asyncHandler(async (req, res) => {
+    const breakerData = ErrorHandler.processBreakerData(req.body, 'update');
 
     try {
-        const result = await dbRun(
+        const result = await databaseService.run(
             `UPDATE breakers SET label = ?, amperage = ?, critical = ?, monitor = ?, confirmed = ?, breaker_type = ?, slot_position = ? WHERE id = ?`,
             [breakerData.label, breakerData.amperage, breakerData.critical, breakerData.monitor, 
              breakerData.confirmed, breakerData.breaker_type, breakerData.slot_position, req.params.id]
         );
 
         if (result.changes === 0) {
-            return res.status(404).json({ error: 'Breaker not found' });
+            const errorInfo = ErrorHandler.handleNotFoundError('Breaker');
+            return ErrorHandler.sendError(res, errorInfo);
         }
         res.json({ id: req.params.id, ...breakerData });
     } catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'A breaker already exists at this position and slot' });
-        }
-        throw error;
+        const errorInfo = ErrorHandler.handleDatabaseError(error);
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
-router.delete('/breakers/:id', validateId(), asyncHandler(async (req, res) => {
-    const result = await dbRun('DELETE FROM breakers WHERE id = ?', [req.params.id]);
+router.delete('/breakers/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const result = await databaseService.run('DELETE FROM breakers WHERE id = ?', [req.params.id]);
     if (result.changes === 0) {
-        return res.status(404).json({ error: 'Breaker not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Breaker');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json({ message: 'Breaker deleted successfully' });
 }));
 
 // Move breaker endpoint
-router.post('/breakers/move', asyncHandler(async (req, res) => {
+router.post('/breakers/move', ErrorHandler.asyncHandler(async (req, res) => {
     const {
         sourceBreakerId,
         destinationPanelId,
@@ -190,116 +163,106 @@ router.post('/breakers/move', asyncHandler(async (req, res) => {
 
     // Validate required fields
     if (!sourceBreakerId || !destinationPanelId || !destinationPosition) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        const errorInfo = ErrorHandler.handleValidationError('Missing required fields');
+        return ErrorHandler.sendError(res, errorInfo);
     }
 
     try {
-        // Start transaction
-        await dbRun('BEGIN TRANSACTION');
-
-        // Get source breaker and its circuits
-        const sourceBreaker = await dbGet('SELECT * FROM breakers WHERE id = ?', [sourceBreakerId]);
+        // Check source breaker exists first (outside transaction)
+        const sourceBreaker = await databaseService.get('SELECT * FROM breakers WHERE id = ?', [sourceBreakerId]);
         if (!sourceBreaker) {
-            await dbRun('ROLLBACK');
-            return res.status(404).json({ error: 'Source breaker not found' });
+            const errorInfo = ErrorHandler.handleNotFoundError('Source breaker');
+            return ErrorHandler.sendError(res, errorInfo);
         }
 
-        const sourceCircuits = await dbAll(
-            'SELECT * FROM circuits WHERE breaker_id = ?', 
-            [sourceBreakerId]
-        );
-
-        // Check if destination position is occupied
-        let destinationBreaker = await dbGet(
-            'SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', 
-            [destinationPanelId, destinationPosition, destinationSlot || 'single']
-        );
-
-        let destinationCircuits = [];
-        if (destinationBreaker) {
-            destinationCircuits = await dbAll(
+        await databaseService.transaction(async (db) => {
+            const sourceCircuits = await db.all(
                 'SELECT * FROM circuits WHERE breaker_id = ?', 
-                [destinationBreaker.id]
+                [sourceBreakerId]
             );
-        }
 
-        if (destinationBreaker) {
-            // Swap circuits between existing breakers
-            for (const circuit of sourceCircuits) {
-                await dbRun(
-                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
-                    [destinationBreaker.id, circuit.id]
-                );
-            }
-            
-            for (const circuit of destinationCircuits) {
-                await dbRun(
-                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
-                    [sourceBreakerId, circuit.id]
-                );
-            }
-        } else {
-            // Create new breaker at destination and move circuits there
-            const newBreaker = await dbRun(
-                `INSERT INTO breakers (panel_id, position, slot_position, label, amperage, critical, monitor, confirmed, breaker_type) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    destinationPanelId,
-                    destinationPosition,
-                    destinationSlot || 'single',
-                    '', // Empty label - will be auto-generated from circuits
-                    sourceBreaker.amperage,
-                    sourceBreaker.critical,
-                    sourceBreaker.monitor,
-                    sourceBreaker.confirmed,
-                    sourceBreaker.breaker_type
-                ]
+            // Check if destination position is occupied
+            let destinationBreaker = await db.get(
+                'SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', 
+                [destinationPanelId, destinationPosition, destinationSlot || 'single']
             );
-            
-            // Move circuits to new breaker
-            for (const circuit of sourceCircuits) {
-                await dbRun(
-                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
-                    [newBreaker.id, circuit.id]
+
+            let destinationCircuits = [];
+            if (destinationBreaker) {
+                destinationCircuits = await db.all(
+                    'SELECT * FROM circuits WHERE breaker_id = ?', 
+                    [destinationBreaker.id]
                 );
             }
-        }
 
-        // Check if source breaker still has circuits after the move
-        const remainingCircuits = await dbAll(
-            'SELECT * FROM circuits WHERE breaker_id = ?', 
-            [sourceBreakerId]
-        );
+            if (destinationBreaker) {
+                // Swap circuits between existing breakers
+                for (const circuit of sourceCircuits) {
+                    await db.run(
+                        'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                        [destinationBreaker.id, circuit.id]
+                    );
+                }
+                
+                for (const circuit of destinationCircuits) {
+                    await db.run(
+                        'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                        [sourceBreakerId, circuit.id]
+                    );
+                }
+            } else {
+                // Create new breaker at destination and move circuits there
+                const newBreaker = await db.run(
+                    `INSERT INTO breakers (panel_id, position, slot_position, label, amperage, critical, monitor, confirmed, breaker_type) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        destinationPanelId,
+                        destinationPosition,
+                        destinationSlot || 'single',
+                        '', // Empty label - will be auto-generated from circuits
+                        sourceBreaker.amperage,
+                        sourceBreaker.critical,
+                        sourceBreaker.monitor,
+                        sourceBreaker.confirmed,
+                        sourceBreaker.breaker_type
+                    ]
+                );
+                
+                // Move circuits to new breaker
+                for (const circuit of sourceCircuits) {
+                    await db.run(
+                        'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                        [newBreaker.id, circuit.id]
+                    );
+                }
+            }
 
-        if (remainingCircuits.length === 0) {
-            // Delete empty source breaker
-            await dbRun('DELETE FROM breakers WHERE id = ?', [sourceBreakerId]);
-        }
+            // Check if source breaker still has circuits after the move
+            const remainingCircuits = await db.all(
+                'SELECT * FROM circuits WHERE breaker_id = ?', 
+                [sourceBreakerId]
+            );
 
-        // Commit transaction
-        await dbRun('COMMIT');
+            if (remainingCircuits.length === 0) {
+                // Delete empty source breaker
+                await db.run('DELETE FROM breakers WHERE id = ?', [sourceBreakerId]);
+            }
+        });
 
         res.json({ 
             message: 'Breaker moved successfully'
         });
 
     } catch (error) {
-        await dbRun('ROLLBACK');
         console.error('Move breaker error:', error);
-        
-        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            res.status(409).json({ error: 'Destination position is already occupied' });
-        } else if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY' || error.code === 'SQLITE_CONSTRAINT') {
-            res.status(400).json({ error: 'Invalid panel or breaker reference' });
-        } else {
-            res.status(500).json({ error: 'Failed to move breaker' });
-        }
+        const errorInfo = ErrorHandler.handleDatabaseError(error, { operation: 'move' });
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
 // Room routes
-router.get('/rooms', asyncHandler(async (req, res) => {
-    const rooms = await dbAll(`
+router.get('/rooms', ErrorHandler.asyncHandler(async (req, res) => {
+    const rooms = await databaseService.all(`
         SELECT * FROM rooms 
         ORDER BY 
             CASE level 
@@ -313,46 +276,44 @@ router.get('/rooms', asyncHandler(async (req, res) => {
     res.json(rooms);
 }));
 
-router.post('/rooms', validateRoomData, asyncHandler(async (req, res) => {
+router.post('/rooms', validateRoomData, ErrorHandler.asyncHandler(async (req, res) => {
     const { name, level } = req.body;
     try {
-        const result = await dbRun('INSERT INTO rooms (name, level) VALUES (?, ?)', [name.trim(), level]);
+        const result = await databaseService.run('INSERT INTO rooms (name, level) VALUES (?, ?)', [name.trim(), level]);
         res.status(201).json({ id: result.id, name: name.trim(), level });
     } catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'A room with this name already exists' });
-        }
-        throw error;
+        const errorInfo = ErrorHandler.handleDatabaseError(error);
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
-router.put('/rooms/:id', validateId(), validateRoomData, asyncHandler(async (req, res) => {
+router.put('/rooms/:id', validateId(), validateRoomData, ErrorHandler.asyncHandler(async (req, res) => {
     const { name, level } = req.body;
     try {
-        const result = await dbRun('UPDATE rooms SET name = ?, level = ? WHERE id = ?', [name.trim(), level, req.params.id]);
+        const result = await databaseService.run('UPDATE rooms SET name = ?, level = ? WHERE id = ?', [name.trim(), level, req.params.id]);
         if (result.changes === 0) {
-            return res.status(404).json({ error: 'Room not found' });
+            const errorInfo = ErrorHandler.handleNotFoundError('Room');
+            return ErrorHandler.sendError(res, errorInfo);
         }
         res.json({ id: req.params.id, name: name.trim(), level });
     } catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'A room with this name already exists' });
-        }
-        throw error;
+        const errorInfo = ErrorHandler.handleDatabaseError(error);
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
-router.delete('/rooms/:id', validateId(), asyncHandler(async (req, res) => {
-    const result = await dbRun('DELETE FROM rooms WHERE id = ?', [req.params.id]);
+router.delete('/rooms/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const result = await databaseService.run('DELETE FROM rooms WHERE id = ?', [req.params.id]);
     if (result.changes === 0) {
-        return res.status(404).json({ error: 'Room not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Room');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json({ message: 'Room deleted successfully' });
 }));
 
 // Circuit routes
-router.get('/circuits', asyncHandler(async (req, res) => {
-    const circuits = await dbAll(`
+router.get('/circuits', ErrorHandler.asyncHandler(async (req, res) => {
+    const circuits = await databaseService.all(`
         SELECT c.*, r.name as room_name, r.level as room_level 
         FROM circuits c 
         LEFT JOIN rooms r ON c.room_id = r.id 
@@ -361,8 +322,8 @@ router.get('/circuits', asyncHandler(async (req, res) => {
     res.json(circuits);
 }));
 
-router.get('/breakers/:breakerId/circuits', validateId('breakerId'), asyncHandler(async (req, res) => {
-    const circuits = await dbAll(`
+router.get('/breakers/:breakerId/circuits', validateId('breakerId'), ErrorHandler.asyncHandler(async (req, res) => {
+    const circuits = await databaseService.all(`
         SELECT c.*, r.name as room_name, r.level as room_level 
         FROM circuits c 
         LEFT JOIN rooms r ON c.room_id = r.id 
@@ -372,68 +333,45 @@ router.get('/breakers/:breakerId/circuits', validateId('breakerId'), asyncHandle
     res.json(circuits);
 }));
 
-router.post('/circuits', validateCircuitData, asyncHandler(async (req, res) => {
-    const { breaker_id, room_id, type, notes, subpanel_id } = req.body;
-
-    const circuitData = {
-        breaker_id,
-        room_id: room_id || null,
-        type: type || null,
-        notes: notes?.trim() || null,
-        subpanel_id: subpanel_id || null
-    };
+router.post('/circuits', validateCircuitData, ErrorHandler.asyncHandler(async (req, res) => {
+    const circuitData = ErrorHandler.processCircuitData(req.body, 'create');
 
     try {
-        const result = await dbRun(
+        const result = await databaseService.run(
             `INSERT INTO circuits (breaker_id, room_id, type, notes, subpanel_id) VALUES (?, ?, ?, ?, ?)`,
             [circuitData.breaker_id, circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id]
         );
 
         res.status(201).json({ id: result.id, ...circuitData });
     } catch (error) {
-        if (error.message.includes('FOREIGN KEY constraint failed')) {
-            if (error.message.includes('breaker_id')) {
-                return res.status(400).json({ error: 'Invalid breaker_id - breaker does not exist' });
-            } else if (error.message.includes('room_id')) {
-                return res.status(400).json({ error: 'Invalid room_id - room does not exist' });
-            } else if (error.message.includes('subpanel_id')) {
-                return res.status(400).json({ error: 'Invalid subpanel_id - subpanel does not exist' });
-            } else {
-                return res.status(400).json({ error: 'Foreign key constraint violation' });
-            }
-        }
-        throw error;
+        const errorInfo = ErrorHandler.handleDatabaseError(error, { field: 'breaker_id' });
+        ErrorHandler.sendError(res, errorInfo);
     }
 }));
 
-router.put('/circuits/:id', validateId(), validateCircuitData, asyncHandler(async (req, res) => {
-    const { room_id, type, notes, subpanel_id } = req.body;
+router.put('/circuits/:id', validateId(), validateCircuitData, ErrorHandler.asyncHandler(async (req, res) => {
+    const circuitData = ErrorHandler.processCircuitData(req.body, 'update');
 
-    const circuitData = {
-        room_id: room_id || null,
-        type: type || null,
-        notes: notes?.trim() || null,
-        subpanel_id: subpanel_id || null
-    };
-
-    const result = await dbRun(
+    const result = await databaseService.run(
         `UPDATE circuits SET room_id = ?, type = ?, notes = ?, subpanel_id = ? WHERE id = ?`,
         [circuitData.room_id, circuitData.type, circuitData.notes, circuitData.subpanel_id, req.params.id]
     );
 
     if (result.changes === 0) {
-        return res.status(404).json({ error: 'Circuit not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Circuit');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json({ id: req.params.id, ...circuitData });
 }));
 
-router.delete('/circuits/:id', validateId(), asyncHandler(async (req, res) => {
-    const result = await dbRun('DELETE FROM circuits WHERE id = ?', [req.params.id]);
+router.delete('/circuits/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
+    const result = await databaseService.run('DELETE FROM circuits WHERE id = ?', [req.params.id]);
     if (result.changes === 0) {
-        return res.status(404).json({ error: 'Circuit not found' });
+        const errorInfo = ErrorHandler.handleNotFoundError('Circuit');
+        return ErrorHandler.sendError(res, errorInfo);
     }
     res.json({ message: 'Circuit deleted successfully' });
 }));
 
 
-module.exports = { router, setDbHelpers };
+module.exports = { router, setDatabaseService };
