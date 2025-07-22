@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ErrorHandler = require('./services/error-handler');
+const CrudHelpers = require('./crud-helpers');
 
 // Import validation middleware
 const {
@@ -16,6 +17,7 @@ let databaseService;
 
 const setDatabaseService = (service) => {
     databaseService = service;
+    CrudHelpers.setDatabaseService(service);
 };
 
 // Panel routes
@@ -24,49 +26,22 @@ router.get('/panels', ErrorHandler.asyncHandler(async (req, res) => {
     res.json(panels);
 }));
 
-router.get('/panels/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const panel = await databaseService.get('SELECT * FROM panels WHERE id = ?', [req.params.id]);
-    if (!panel) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Panel');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json(panel);
-}));
+router.get('/panels/:id', validateId(), CrudHelpers.createGetByIdHandler('panels', 'Panel'));
 
-router.post('/panels', validatePanelData, ErrorHandler.asyncHandler(async (req, res) => {
-    const { name, size } = req.body;
-    try {
-        const result = await databaseService.run('INSERT INTO panels (name, size) VALUES (?, ?)', [name.trim(), size]);
-        res.status(201).json({ id: result.id, name: name.trim(), size });
-    } catch (error) {
-        const errorInfo = ErrorHandler.handleDatabaseError(error);
-        ErrorHandler.sendError(res, errorInfo);
-    }
-}));
+router.post('/panels', validatePanelData, CrudHelpers.createCreateHandler(
+    'panels',
+    ['name', 'size'],
+    CrudHelpers.createTextTrimmer(['name'])
+));
 
-router.put('/panels/:id', validateId(), validatePanelData, ErrorHandler.asyncHandler(async (req, res) => {
-    const { name, size } = req.body;
-    try {
-        const result = await databaseService.run('UPDATE panels SET name = ?, size = ? WHERE id = ?', [name.trim(), size, req.params.id]);
-        if (result.changes === 0) {
-            const errorInfo = ErrorHandler.handleNotFoundError('Panel');
-            return ErrorHandler.sendError(res, errorInfo);
-        }
-        res.json({ id: req.params.id, name: name.trim(), size });
-    } catch (error) {
-        const errorInfo = ErrorHandler.handleDatabaseError(error);
-        ErrorHandler.sendError(res, errorInfo);
-    }
-}));
+router.put('/panels/:id', validateId(), validatePanelData, CrudHelpers.createUpdateHandler(
+    'panels',
+    'Panel',
+    ['name', 'size'],
+    CrudHelpers.createTextTrimmer(['name'])
+));
 
-router.delete('/panels/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const result = await databaseService.run('DELETE FROM panels WHERE id = ?', [req.params.id]);
-    if (result.changes === 0) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Panel');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json({ message: 'Panel deleted successfully' });
-}));
+router.delete('/panels/:id', validateId(), CrudHelpers.createDeleteHandler('panels', 'Panel'));
 
 // Breaker routes
 router.get('/panels/:panelId/breakers', validateId('panelId'), ErrorHandler.asyncHandler(async (req, res) => {
@@ -74,24 +49,15 @@ router.get('/panels/:panelId/breakers', validateId('panelId'), ErrorHandler.asyn
     res.json(breakers);
 }));
 
-router.get('/breakers/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const breaker = await databaseService.get('SELECT * FROM breakers WHERE id = ?', [req.params.id]);
-    if (!breaker) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Breaker');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json(breaker);
-}));
+router.get('/breakers/:id', validateId(), CrudHelpers.createGetByIdHandler('breakers', 'Breaker'));
 
-router.get('/panels/:panelId/breakers/position/:position', ErrorHandler.asyncHandler(async (req, res) => {
-    const panelId = parseInt(req.params.panelId);
-    const position = parseInt(req.params.position);
+router.get('/panels/:panelId/breakers/position/:position', 
+    CrudHelpers.validateNumericParam('panelId'),
+    CrudHelpers.validateNumericParam('position'),
+    ErrorHandler.asyncHandler(async (req, res) => {
+    const panelId = req.params.panelId;
+    const position = req.params.position;
     const slotPosition = req.query.slot_position || 'single';
-    
-    if (isNaN(panelId) || isNaN(position) || panelId <= 0 || position <= 0) {
-        const errorInfo = ErrorHandler.handleValidationError('Invalid panel ID or position');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
 
     // For tandem breakers, we might need to get both A and B breakers
     if (slotPosition === 'both') {
@@ -143,14 +109,7 @@ router.put('/breakers/:id', validateId(), validateBreakerData, ErrorHandler.asyn
     }
 }));
 
-router.delete('/breakers/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const result = await databaseService.run('DELETE FROM breakers WHERE id = ?', [req.params.id]);
-    if (result.changes === 0) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Breaker');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json({ message: 'Breaker deleted successfully' });
-}));
+router.delete('/breakers/:id', validateId(), CrudHelpers.createDeleteHandler('breakers', 'Breaker'));
 
 // Move breaker endpoint
 router.post('/breakers/move', ErrorHandler.asyncHandler(async (req, res) => {
@@ -163,8 +122,7 @@ router.post('/breakers/move', ErrorHandler.asyncHandler(async (req, res) => {
 
     // Validate required fields
     if (!sourceBreakerId || !destinationPanelId || !destinationPosition) {
-        const errorInfo = ErrorHandler.handleValidationError('Missing required fields');
-        return ErrorHandler.sendError(res, errorInfo);
+        return CrudHelpers.handleValidationError(res, 'Missing required fields');
     }
 
     try {
@@ -276,40 +234,20 @@ router.get('/rooms', ErrorHandler.asyncHandler(async (req, res) => {
     res.json(rooms);
 }));
 
-router.post('/rooms', validateRoomData, ErrorHandler.asyncHandler(async (req, res) => {
-    const { name, level } = req.body;
-    try {
-        const result = await databaseService.run('INSERT INTO rooms (name, level) VALUES (?, ?)', [name.trim(), level]);
-        res.status(201).json({ id: result.id, name: name.trim(), level });
-    } catch (error) {
-        const errorInfo = ErrorHandler.handleDatabaseError(error);
-        ErrorHandler.sendError(res, errorInfo);
-    }
-}));
+router.post('/rooms', validateRoomData, CrudHelpers.createCreateHandler(
+    'rooms',
+    ['name', 'level'],
+    CrudHelpers.createTextTrimmer(['name'])
+));
 
-router.put('/rooms/:id', validateId(), validateRoomData, ErrorHandler.asyncHandler(async (req, res) => {
-    const { name, level } = req.body;
-    try {
-        const result = await databaseService.run('UPDATE rooms SET name = ?, level = ? WHERE id = ?', [name.trim(), level, req.params.id]);
-        if (result.changes === 0) {
-            const errorInfo = ErrorHandler.handleNotFoundError('Room');
-            return ErrorHandler.sendError(res, errorInfo);
-        }
-        res.json({ id: req.params.id, name: name.trim(), level });
-    } catch (error) {
-        const errorInfo = ErrorHandler.handleDatabaseError(error);
-        ErrorHandler.sendError(res, errorInfo);
-    }
-}));
+router.put('/rooms/:id', validateId(), validateRoomData, CrudHelpers.createUpdateHandler(
+    'rooms',
+    'Room',
+    ['name', 'level'],
+    CrudHelpers.createTextTrimmer(['name'])
+));
 
-router.delete('/rooms/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const result = await databaseService.run('DELETE FROM rooms WHERE id = ?', [req.params.id]);
-    if (result.changes === 0) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Room');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json({ message: 'Room deleted successfully' });
-}));
+router.delete('/rooms/:id', validateId(), CrudHelpers.createDeleteHandler('rooms', 'Room'));
 
 // Circuit routes
 router.get('/circuits', ErrorHandler.asyncHandler(async (req, res) => {
@@ -364,14 +302,7 @@ router.put('/circuits/:id', validateId(), validateCircuitData, ErrorHandler.asyn
     res.json({ id: req.params.id, ...circuitData });
 }));
 
-router.delete('/circuits/:id', validateId(), ErrorHandler.asyncHandler(async (req, res) => {
-    const result = await databaseService.run('DELETE FROM circuits WHERE id = ?', [req.params.id]);
-    if (result.changes === 0) {
-        const errorInfo = ErrorHandler.handleNotFoundError('Circuit');
-        return ErrorHandler.sendError(res, errorInfo);
-    }
-    res.json({ message: 'Circuit deleted successfully' });
-}));
+router.delete('/circuits/:id', validateId(), CrudHelpers.createDeleteHandler('circuits', 'Circuit'));
 
 
 module.exports = { router, setDatabaseService };
