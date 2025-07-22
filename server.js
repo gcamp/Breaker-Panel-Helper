@@ -1,9 +1,9 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
-const { router, setDbHelpers } = require('./routes');
+const DatabaseService = require('./services/database-service');
+const ErrorHandler = require('./services/error-handler');
+const { router, setDatabaseService } = require('./routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,152 +13,11 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // More secure than bodyParser
 app.use(express.static('public'));
 
-// Register routes (helpers will be set later)
+// Register routes (database service will be set later)
 app.use('/api', router);
 
-// Database connection
-let db;
-
-const initializeDatabase = () => {
-    return new Promise((resolve, reject) => {
-        db.serialize(() => {
-            // Enable foreign key constraints
-            db.run('PRAGMA foreign_keys = ON;');
-            
-            // Create tables with proper constraints
-            db.run(`CREATE TABLE IF NOT EXISTS panels (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL CHECK(length(name) > 0),
-                size INTEGER NOT NULL CHECK(size >= 12 AND size <= 42),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`);
-
-            db.run(`CREATE TABLE IF NOT EXISTS breakers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                panel_id INTEGER NOT NULL,
-                position INTEGER NOT NULL CHECK(position > 0),
-                slot_position TEXT DEFAULT 'single' CHECK(slot_position IN ('single', 'A', 'B')),
-                label TEXT,
-                amperage INTEGER CHECK(amperage > 0 AND amperage <= 200),
-                critical BOOLEAN DEFAULT 0,
-                monitor BOOLEAN DEFAULT 0,
-                confirmed BOOLEAN DEFAULT 0,
-                breaker_type TEXT DEFAULT 'single' CHECK(breaker_type IN ('single', 'double_pole', 'tandem')),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
-                UNIQUE(panel_id, position, slot_position)
-            )`);
-
-            db.run(`CREATE TABLE IF NOT EXISTS rooms (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE CHECK(length(name) > 0),
-                level TEXT NOT NULL CHECK(level IN ('basement', 'main', 'upper', 'outside')),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`);
-
-            db.run(`CREATE TABLE IF NOT EXISTS circuits (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                breaker_id INTEGER NOT NULL,
-                room_id INTEGER,
-                type TEXT CHECK(type IN ('outlet', 'lighting', 'heating', 'appliance', 'subpanel')),
-                notes TEXT,
-                subpanel_id INTEGER,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (breaker_id) REFERENCES breakers (id) ON DELETE CASCADE,
-                FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
-                FOREIGN KEY (subpanel_id) REFERENCES panels (id) ON DELETE SET NULL
-            )`, (err) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
-    });
-};
-
-// Database helper functions
-const dbGet = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.get(query, params, (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-};
-
-const dbAll = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.all(query, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
-};
-
-const dbRun = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.run(query, params, function(err) {
-            if (err) reject(err);
-            else resolve({ id: this.lastID, changes: this.changes });
-        });
-    });
-};
-
-// Database permissions validation
-const validateDatabasePermissions = (dbPath) => {
-    return new Promise((resolve, reject) => {
-        const dbDir = path.dirname(dbPath);
-        
-        // Ensure directory exists
-        if (!fs.existsSync(dbDir)) {
-            try {
-                fs.mkdirSync(dbDir, { recursive: true });
-                console.log(`Created database directory: ${dbDir}`);
-            } catch (dirErr) {
-                console.error('Error creating database directory:', dirErr.message);
-                reject(dirErr);
-                return;
-            }
-        }
-        
-        // Check directory permissions
-        try {
-            fs.accessSync(dbDir, fs.constants.W_OK);
-            console.log(`Database directory is writable: ${dbDir}`);
-        } catch (accessErr) {
-            console.error(`Database directory is not writable: ${dbDir}`);
-            console.error('Permission details:', accessErr.message);
-            console.error('Current user in container:', process.getuid ? `UID=${process.getuid()} GID=${process.getgid()}` : 'Unknown');
-            const stats = fs.statSync(dbDir);
-            console.error(`Directory permissions: mode=${stats.mode.toString(8)} uid=${stats.uid} gid=${stats.gid}`);
-            reject(new Error(`Database directory ${dbDir} is not writable. Check volume mount permissions.`));
-            return;
-        }
-        
-        // Check if database file exists and is writable
-        if (fs.existsSync(dbPath)) {
-            try {
-                fs.accessSync(dbPath, fs.constants.W_OK);
-                console.log(`Database file is writable: ${dbPath}`);
-            } catch (dbAccessErr) {
-                console.error(`Database file is read-only: ${dbPath}`);
-                const dbStats = fs.statSync(dbPath);
-                console.error(`Database file permissions: mode=${dbStats.mode.toString(8)} uid=${dbStats.uid} gid=${dbStats.gid}`);
-                console.error('Current user in container:', process.getuid ? `UID=${process.getuid()} GID=${process.getgid()}` : 'Unknown');
-                console.error('\nFIX: Run these commands on your Unraid server:');
-                console.error(`  chmod 644 ${dbPath}`);
-                console.error(`  chown 1001:1001 ${dbPath}`);
-                console.error('Or delete the file to let the application create a new one.');
-                reject(new Error(`Database file ${dbPath} is read-only. See console for fix instructions.`));
-                return;
-            }
-        }
-        
-        resolve();
-    });
-};
+// Database service instance
+const databaseService = new DatabaseService();
 
 // Static route
 app.get('/', (req, res) => {
@@ -166,12 +25,7 @@ app.get('/', (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-    console.error('Server error:', err);
-    res.status(500).json({ 
-        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
-    });
-});
+app.use(ErrorHandler.globalErrorHandler);
 
 // 404 handler
 app.use((req, res) => {
@@ -182,48 +36,25 @@ app.use((req, res) => {
 const connectDB = async () => {
     const DB_PATH = process.env.DB_PATH || 'breaker_panel.db';
     
-    // Validate database path and permissions
-    await validateDatabasePermissions(DB_PATH);
-    
-    return new Promise((resolve, reject) => {
-        
-        db = new sqlite3.Database(DB_PATH, async (err) => {
-            if (err) {
-                console.error('Error opening database:', err.message);
-                reject(err);
-            } else {
-                console.log(`Connected to SQLite database: ${DB_PATH}`);
-                try {
-                    await initializeDatabase();
-                    
-                    // Initialize database helpers for routes
-                    setDbHelpers({ dbGet, dbAll, dbRun });
-                    
-                    resolve();
-                } catch (initErr) {
-                    console.error('Error initializing database:', initErr.message);
-                    reject(initErr);
-                }
-            }
-        });
-    });
+    try {
+        await databaseService.initialize(DB_PATH);
+        setDatabaseService(databaseService);
+        console.log('Database service initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize database service:', error.message);
+        throw error;
+    }
 };
 
 // Graceful shutdown
-const gracefulShutdown = () => {
+const gracefulShutdown = async () => {
     console.log('\nReceived shutdown signal, closing database...');
-    if (db) {
-        db.close((err) => {
-            if (err) {
-                console.error('Error closing database:', err.message);
-                process.exit(1);
-            } else {
-                console.log('Database connection closed');
-                process.exit(0);
-            }
-        });
-    } else {
+    try {
+        await databaseService.close();
         process.exit(0);
+    } catch (error) {
+        console.error('Error during shutdown:', error.message);
+        process.exit(1);
     }
 };
 
