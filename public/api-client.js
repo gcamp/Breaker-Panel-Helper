@@ -154,6 +154,24 @@ class ApiClient {
         });
     }
 
+    async moveBreaker(moveData) {
+        // Validate required fields
+        if (!this.isValidId(moveData.sourceBreakerId)) {
+            throw new Error('Invalid source breaker ID');
+        }
+        if (!this.isValidId(moveData.destinationPanelId)) {
+            throw new Error('Invalid destination panel ID');
+        }
+        if (!this.isValidPosition(moveData.destinationPosition)) {
+            throw new Error('Invalid destination position');
+        }
+        
+        return this.request('/breakers/move', {
+            method: 'POST',
+            body: moveData,
+        });
+    }
+
     // Room API methods
     async getAllRooms() {
         return this.request('/rooms');

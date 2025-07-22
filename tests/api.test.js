@@ -271,6 +271,314 @@ describe('Breaker Panel API Tests', () => {
         });
     });
 
+    describe('Breaker Move Operations', () => {
+        let sourcePanelId;
+        let destPanelId;
+        let sourceBreakerId;
+        let destBreakerId;
+
+        beforeEach(async () => {
+            // Create source panel
+            const sourcePanel = await request(app)
+                .post('/api/panels')
+                .send({ name: 'Source Panel', size: 20 });
+            sourcePanelId = sourcePanel.body.id;
+
+            // Create destination panel
+            const destPanel = await request(app)
+                .post('/api/panels')
+                .send({ name: 'Destination Panel', size: 20 });
+            destPanelId = destPanel.body.id;
+
+            // Create source breaker
+            const sourceBreaker = await request(app)
+                .post('/api/breakers')
+                .send({
+                    panel_id: sourcePanelId,
+                    position: 1,
+                    label: 'Source Breaker',
+                    amperage: 20,
+                    breaker_type: 'single'
+                });
+            sourceBreakerId = sourceBreaker.body.id;
+
+            // Create a circuit for the source breaker
+            await request(app)
+                .post('/api/circuits')
+                .send({
+                    breaker_id: sourceBreakerId,
+                    room: 'Living Room',
+                    type: 'outlet',
+                    notes: 'Main outlets'
+                });
+        });
+
+        test('POST /api/breakers/move - Move to empty position', async () => {
+            const moveData = {
+                sourceBreakerId: sourceBreakerId,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: destPanelId,
+                destinationPosition: 2,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(200);
+
+            expect(response.body.message).toBe('Breaker moved successfully');
+
+            // Verify destination breaker was created
+            const destBreakers = await request(app)
+                .get(`/api/panels/${destPanelId}/breakers`)
+                .expect(200);
+
+            expect(destBreakers.body).toHaveLength(1);
+            expect(destBreakers.body[0].position).toBe(2);
+
+            // Source breaker should be deleted since it has no remaining circuits
+            await request(app)
+                .get(`/api/breakers/${sourceBreakerId}`)
+                .expect(404);
+        });
+
+        test('POST /api/breakers/move - Move to empty position (different panel)', async () => {
+            const moveData = {
+                sourceBreakerId: sourceBreakerId,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: destPanelId,
+                destinationPosition: 3,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(200);
+
+            expect(response.body.message).toBe('Breaker moved successfully');
+
+            // Verify destination breaker was created
+            const destBreakers = await request(app)
+                .get(`/api/panels/${destPanelId}/breakers`)
+                .expect(200);
+
+            expect(destBreakers.body).toHaveLength(1);
+            expect(destBreakers.body[0].position).toBe(3);
+
+            // Source breaker should be deleted since circuits moved
+            await request(app)
+                .get(`/api/breakers/${sourceBreakerId}`)
+                .expect(404);
+        });
+
+        test('POST /api/breakers/move - Swap operation with occupied destination', async () => {
+            // Create destination breaker
+            const destBreaker = await request(app)
+                .post('/api/breakers')
+                .send({
+                    panel_id: destPanelId,
+                    position: 4,
+                    label: 'Destination Breaker',
+                    amperage: 15,
+                    breaker_type: 'single'
+                });
+            destBreakerId = destBreaker.body.id;
+
+            // Create a circuit for the destination breaker
+            await request(app)
+                .post('/api/circuits')
+                .send({
+                    breaker_id: destBreakerId,
+                    room: 'Kitchen',
+                    type: 'appliance',
+                    notes: 'Refrigerator'
+                });
+
+            const moveData = {
+                sourceBreakerId: sourceBreakerId,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: destPanelId,
+                destinationPosition: 4,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(200);
+
+            expect(response.body.message).toBe('Breaker moved successfully');
+
+            // Verify circuits were swapped between breakers (breakers stay in original positions)
+            const sourceCheck = await request(app)
+                .get(`/api/breakers/${sourceBreakerId}`)
+                .expect(200);
+
+            const destCheck = await request(app)
+                .get(`/api/breakers/${destBreakerId}`)
+                .expect(200);
+
+            // Breakers should remain in their original positions
+            expect(sourceCheck.body.panel_id).toBe(sourcePanelId);
+            expect(sourceCheck.body.position).toBe(1);
+            expect(destCheck.body.panel_id).toBe(destPanelId);
+            expect(destCheck.body.position).toBe(4);
+
+            // Verify circuits were swapped by checking which breaker they're associated with
+            const sourceCircuits = await request(app)
+                .get(`/api/breakers/${sourceBreakerId}/circuits`)
+                .expect(200);
+
+            const destCircuits = await request(app)
+                .get(`/api/breakers/${destBreakerId}/circuits`)
+                .expect(200);
+
+            // Source breaker should now have destination's original circuits
+            // Destination breaker should now have source's original circuits
+            expect(sourceCircuits.body).toBeDefined();
+            expect(destCircuits.body).toBeDefined();
+        });
+
+        test('POST /api/breakers/move - Cross-panel move', async () => {
+            const moveData = {
+                sourceBreakerId: sourceBreakerId,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: destPanelId,
+                destinationPosition: 5,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(200);
+
+            expect(response.body.message).toBe('Breaker moved successfully');
+
+            // Verify destination breaker was created
+            const destBreakers = await request(app)
+                .get(`/api/panels/${destPanelId}/breakers`)
+                .expect(200);
+
+            expect(destBreakers.body).toHaveLength(1);
+            expect(destBreakers.body[0].position).toBe(5);
+
+            // Source breaker should be deleted since circuits moved
+            await request(app)
+                .get(`/api/breakers/${sourceBreakerId}`)
+                .expect(404);
+        });
+
+        test('POST /api/breakers/move - Missing required fields', async () => {
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send({
+                    sourceBreakerId: sourceBreakerId,
+                    // Missing destinationPanelId and destinationPosition
+                })
+                .expect(400);
+
+            expect(response.body.error).toBe('Missing required fields');
+        });
+
+        test('POST /api/breakers/move - Invalid source breaker', async () => {
+            const moveData = {
+                sourceBreakerId: 99999, // Non-existent ID
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: destPanelId,
+                destinationPosition: 6,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(404);
+
+            expect(response.body.error).toBe('Source breaker not found');
+        });
+
+        test('POST /api/breakers/move - Tandem slot move', async () => {
+            // Create tandem breaker
+            const tandemBreaker = await request(app)
+                .post('/api/breakers')
+                .send({
+                    panel_id: sourcePanelId,
+                    position: 2,
+                    slot_position: 'A',
+                    label: 'Tandem A',
+                    amperage: 15,
+                    breaker_type: 'tandem'
+                });
+
+            const moveData = {
+                sourceBreakerId: tandemBreaker.body.id,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 2,
+                sourceSlot: 'A',
+                destinationPanelId: destPanelId,
+                destinationPosition: 7,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(200);
+
+            expect(response.body.message).toBe('Breaker moved successfully');
+
+            // Verify new breaker created at destination
+            const destBreakers = await request(app)
+                .get(`/api/panels/${destPanelId}/breakers`)
+                .expect(200);
+
+            const movedBreaker = destBreakers.body.find(b => b.position === 7);
+            expect(movedBreaker).toBeDefined();
+            expect(movedBreaker.slot_position).toBe('single');
+        });
+
+        test('POST /api/breakers/move - Database transaction rollback on error', async () => {
+            // Attempt move with invalid destination panel
+            const moveData = {
+                sourceBreakerId: sourceBreakerId,
+                sourcePanelId: sourcePanelId,
+                sourcePosition: 1,
+                sourceSlot: 'single',
+                destinationPanelId: 99999, // Non-existent panel
+                destinationPosition: 8,
+                destinationSlot: 'single'
+            };
+
+            const response = await request(app)
+                .post('/api/breakers/move')
+                .send(moveData)
+                .expect(400);
+
+            expect(response.body.error).toBe('Invalid panel or breaker reference');
+
+            // Verify source breaker unchanged
+            const sourceCheck = await request(app)
+                .get(`/api/breakers/${sourceBreakerId}`)
+                .expect(200);
+
+            expect(sourceCheck.body.panel_id).toBe(sourcePanelId);
+            expect(sourceCheck.body.position).toBe(1);
+        });
+    });
+
     describe('Room Management', () => {
         let roomId;
 

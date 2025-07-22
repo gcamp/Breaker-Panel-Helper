@@ -37,7 +37,8 @@
       "Bash(docker logs:*)",
       "Bash(docker exec:*)",
       "Bash(docker stop:*)",
-      "Bash(docker rm:*)"
+      "Bash(docker rm:*)",
+      "Bash(gh pr create:*)"
     ],
     "deny": []
   }

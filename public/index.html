@@ -190,6 +190,7 @@
                 <h2 data-i18n="breakers.editBreaker">Edit Breaker</h2>
                 <div class="modal-top-actions">
                     <button type="submit" form="breaker-form" data-i18n="app.save">Save</button>
+                    <button type="button" id="move-breaker" class="move-btn" data-i18n="breakers.moveBreaker">Move Breaker</button>
                     <button type="button" id="delete-breaker" class="delete-btn" data-i18n="breakers.deleteBreaker">Delete Breaker</button>
                 </div>
                 <form id="breaker-form">
@@ -247,12 +248,50 @@
                 </form>
             </div>
         </div>
+
+        <div id="move-breaker-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 data-i18n="breakers.moveBreaker">Move Breaker</h2>
+                
+
+                <div class="destination-selection">
+                    <h3 data-i18n="breakers.selectDestination">Select Destination</h3>
+                    
+                    <div class="panel-selector-move">
+                        <label for="destination-panel" data-i18n="panels.destinationPanel">Destination Panel:</label>
+                        <select id="destination-panel">
+                            <!-- Panels will be populated here -->
+                        </select>
+                    </div>
+                    
+                    <div class="destination-panel-container">
+                        <div id="destination-breaker-panel" class="breaker-panel destination-panel">
+                            <!-- Destination panel will be generated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="move-preview" style="display: none;">
+                    <h3 data-i18n="breakers.previewChanges">Preview Changes</h3>
+                    <div id="move-preview-content" class="preview-content">
+                        <!-- Preview text will be generated here -->
+                    </div>
+                    
+                    <div class="move-actions">
+                        <button type="button" id="confirm-move" class="confirm-btn" data-i18n="breakers.confirmMove">Confirm Move</button>
+                        <button type="button" id="cancel-move" class="cancel-btn" data-i18n="app.cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="i18n.js"></script>
     <script src="api-client.js"></script>
     <script src="panel-renderer.js"></script>
     <script src="circuit-list.js"></script>
+    <script src="move-manager.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

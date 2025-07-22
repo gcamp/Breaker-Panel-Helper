@@ -3,6 +3,8 @@
  * Manages electrical panel breakers with comprehensive circuit tracking
  */
 
+/* global MoveManager */
+
 /**
  * Main Application Class
  */
@@ -21,6 +23,7 @@ class BreakerPanelApp {
         // Initialize modules
         this.panelRenderer = new PanelRenderer(this);
         this.circuitListManager = new CircuitListManager(this);
+        this.moveManager = new MoveManager(this);
         
         this.init();
     }
@@ -176,6 +179,24 @@ class BreakerPanelApp {
         await this.populatePanelSelector();
     }
 
+    async createPanelOptions(panels, circuits) {
+        const subpanelIds = new Set(
+            circuits
+                .filter(circuit => circuit.type === 'subpanel' && circuit.subpanel_id)
+                .map(circuit => circuit.subpanel_id)
+        );
+        
+        return panels.map(panel => {
+            const isMain = !subpanelIds.has(panel.id);
+            const prefix = isMain ? '🏠 ' : '⚡ ';
+            return {
+                value: panel.id,
+                text: prefix + panel.name,
+                panel
+            };
+        });
+    }
+
     async populatePanelSelector() {
         const selector = document.getElementById('current-panel');
         if (!selector) return;
@@ -183,18 +204,12 @@ class BreakerPanelApp {
         selector.innerHTML = '';
         
         const circuits = await this.api.getAllCircuits();
-        const subpanelIds = new Set(
-            circuits
-                .filter(circuit => circuit.type === 'subpanel' && circuit.subpanel_id)
-                .map(circuit => circuit.subpanel_id)
-        );
+        const panelOptions = await this.createPanelOptions(this.allPanels, circuits);
         
-        this.allPanels.forEach(panel => {
+        panelOptions.forEach(({ value, text }) => {
             const option = document.createElement('option');
-            option.value = panel.id;
-            const isMain = !subpanelIds.has(panel.id);
-            const prefix = isMain ? '🏠 ' : '⚡ ';
-            option.textContent = prefix + panel.name;
+            option.value = value;
+            option.textContent = text;
             selector.appendChild(option);
         });
         
@@ -387,6 +402,11 @@ class BreakerPanelApp {
 
     showSuccess(message) {
         console.log('Success:', message);
+        alert(message);
+    }
+
+    showNotification(message) {
+        console.log('Notification:', message);
         alert(message);
     }
 
