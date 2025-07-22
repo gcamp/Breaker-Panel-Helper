@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Comprehensive electrical panel breaker management system">
-    <title data-i18n="app.title">Breaker Panel Helper</title>
+    <title>Breaker Panel Helper</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,57 +12,57 @@
         <div class="controls">
             <div class="panel-management">
                 <div class="panel-selector">
-                    <label for="current-panel" data-i18n="panels.currentPanel">Current Panel:</label>
+                    <label for="current-panel">Current Panel:</label>
                     <select id="current-panel">
                         <!-- Panels will be populated here -->
                     </select>
                 </div>
                 
                 <div class="panel-actions">
-                    <button id="new-panel" data-i18n="panels.newPanel">New Panel</button>
-                    <button id="delete-panel" data-i18n="panels.deletePanel">Delete Panel</button>
-                    <button id="manage-rooms" data-i18n="panels.manageRooms">Manage Rooms</button>
+                    <button id="new-panel">New Panel</button>
+                    <button id="delete-panel">Delete Panel</button>
+                    <button id="manage-rooms">Manage Rooms</button>
                 </div>
             </div>
             
             <div class="view-modes" id="view-modes-container">
-                <label data-i18n="viewModes.title">View Mode:</label>
-                <button id="normal-mode" class="mode-btn active" data-i18n="viewModes.normal">Normal</button>
-                <button id="critical-mode" class="mode-btn" data-i18n="viewModes.critical">Critical</button>
-                <button id="monitor-mode" class="mode-btn" data-i18n="viewModes.monitor">Monitor</button>
+                <label>View Mode:</label>
+                <button id="normal-mode" class="mode-btn active">Normal</button>
+                <button id="critical-mode" class="mode-btn">Critical</button>
+                <button id="monitor-mode" class="mode-btn">Monitor</button>
             </div>
             
             <div class="display-modes">
-                <label data-i18n="displayModes.title">Display:</label>
-                <button id="panel-view" class="display-btn active" data-i18n="displayModes.panelView">Panel View</button>
-                <button id="circuit-list" class="display-btn" data-i18n="displayModes.circuitList">Circuit List</button>
-                <button id="print-panel" class="display-btn" data-i18n="displayModes.printPanel">🖨️ Print Panel</button>
+                <label>Display:</label>
+                <button id="panel-view" class="display-btn active">Panel View</button>
+                <button id="circuit-list" class="display-btn">Circuit List</button>
+                <button id="print-panel" class="display-btn">🖨️ Print Panel</button>
             </div>
         </div>
 
         <div id="new-panel-modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h2 data-i18n="panels.createPanel">Create New Panel</h2>
+                <h2>Create New Panel</h2>
                 <form id="new-panel-form">
                     <div class="form-group">
-                        <label for="panel-name" data-i18n="panels.panelName">Panel Name:</label>
+                        <label for="panel-name">Panel Name:</label>
                         <input type="text" id="panel-name" name="name" placeholder="e.g., Main Panel, Garage Subpanel" required>
                     </div>
                     <div class="form-group">
-                        <label for="panel-size" data-i18n="panels.panelSize">Panel Size:</label>
+                        <label for="panel-size">Panel Size:</label>
                         <select id="panel-size" name="size">
-                            <option value="12">12 <span data-i18n="panels.spaces">Spaces</span></option>
-                            <option value="20">20 <span data-i18n="panels.spaces">Spaces</span></option>
-                            <option value="24">24 <span data-i18n="panels.spaces">Spaces</span></option>
-                            <option value="30">30 <span data-i18n="panels.spaces">Spaces</span></option>
-                            <option value="40" selected>40 <span data-i18n="panels.spaces">Spaces</span></option>
-                            <option value="42">42 <span data-i18n="panels.spaces">Spaces</span></option>
+                            <option value="12">12 Spaces</option>
+                            <option value="20">20 Spaces</option>
+                            <option value="24">24 Spaces</option>
+                            <option value="30">30 Spaces</option>
+                            <option value="40" selected>40 Spaces</option>
+                            <option value="42">42 Spaces</option>
                         </select>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" data-i18n="panels.createPanel">Create Panel</button>
-                        <button type="button" id="cancel-new-panel" data-i18n="app.cancel">Cancel</button>
+                        <button type="submit">Create Panel</button>
+                        <button type="button" id="cancel-new-panel">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -71,34 +71,34 @@
         <div id="room-management-modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h2 data-i18n="rooms.title">Manage Rooms</h2>
+                <h2 >Manage Rooms</h2>
                 
                 <div class="room-form">
-                    <h3 data-i18n="rooms.addNewRoom">Add New Room</h3>
+                    <h3 >Add New Room</h3>
                     <form id="room-form">
                         <div class="form-group">
-                            <label for="room-name" data-i18n="rooms.roomName">Room Name:</label>
+                            <label for="room-name" >Room Name:</label>
                             <input type="text" id="room-name" name="name" placeholder="e.g., Kitchen, Master Bedroom" required>
                         </div>
                         <div class="form-group">
-                            <label for="room-level" data-i18n="rooms.level">Level:</label>
+                            <label for="room-level" >Level:</label>
                             <select id="room-level" name="level" required>
-                                <option value="" data-i18n="rooms.selectLevel">Select Level...</option>
-                                <option value="upper" data-i18n="rooms.upperLevel">🟠 Upper Level</option>
-                                <option value="main" data-i18n="rooms.mainLevel">🟢 Main Level</option>
-                                <option value="basement" data-i18n="rooms.basement">🔵 Basement</option>
-                                <option value="outside" data-i18n="rooms.outside">⚫ Outside</option>
+                                <option value="" >Select Level...</option>
+                                <option value="upper" >🟠 Upper Level</option>
+                                <option value="main" >🟢 Main Level</option>
+                                <option value="basement" >🔵 Basement</option>
+                                <option value="outside" >⚫ Outside</option>
                             </select>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" data-i18n="rooms.addNewRoom">Add Room</button>
-                            <button type="button" id="cancel-room" data-i18n="app.cancel">Cancel</button>
+                            <button type="submit" >Add Room</button>
+                            <button type="button" id="cancel-room" >Cancel</button>
                         </div>
                     </form>
                 </div>
                 
                 <div class="room-list">
-                    <h3 data-i18n="rooms.existingRooms">Existing Rooms</h3>
+                    <h3 >Existing Rooms</h3>
                     <div id="rooms-container">
                         <!-- Rooms will be populated here -->
                     </div>
@@ -114,67 +114,67 @@
 
         <div class="circuit-list-container" style="display: none;">
             <div class="circuit-list-header">
-                <h2><span data-i18n="circuitList.title">Circuit List</span> - <span id="circuit-list-panel-name"></span></h2>
-                <p><span data-i18n="circuitList.totalCircuits">Total Circuits:</span> <span id="total-circuits">0</span> | <span data-i18n="circuitList.filteredCircuits">Filtered:</span> <span id="filtered-circuits">0</span></p>
+                <h2><span >Circuit List</span> - <span id="circuit-list-panel-name"></span></h2>
+                <p><span >Total Circuits:</span> <span id="total-circuits">0</span> | <span >Filtered:</span> <span id="filtered-circuits">0</span></p>
             </div>
             
             <div class="circuit-filters">
                 <div class="filter-group">
-                    <label for="circuit-search" data-i18n="circuitList.search">Search:</label>
-                    <input type="text" id="circuit-search" data-i18n-placeholder="circuitList.searchPlaceholder" placeholder="Search circuits, rooms, notes..." />
+                    <label for="circuit-search" >Search:</label>
+                    <input type="text" id="circuit-search"  placeholder="Search circuits, rooms, notes..." />
                 </div>
                 
                 <div class="filter-group">
-                    <label for="room-filter" data-i18n="circuits.room">Room:</label>
+                    <label for="room-filter" >Room:</label>
                     <select id="room-filter">
-                        <option value="" data-i18n="circuitList.allRooms">All Rooms</option>
+                        <option value="" >All Rooms</option>
                     </select>
                 </div>
                 
                 <div class="filter-group">
-                    <label for="type-filter" data-i18n="circuitList.circuitType">Circuit Type:</label>
+                    <label for="type-filter" >Circuit Type:</label>
                     <select id="type-filter">
-                        <option value="" data-i18n="circuitList.allTypes">All Types</option>
-                        <option value="outlet" data-i18n="circuits.types.outlet">🔵 Outlet</option>
-                        <option value="lighting" data-i18n="circuits.types.lighting">🟠 Lighting</option>
-                        <option value="heating" data-i18n="circuits.types.heating">🔴 Heating</option>
-                        <option value="appliance" data-i18n="circuits.types.appliance">🟢 Appliance</option>
-                        <option value="subpanel" data-i18n="circuits.types.subpanel">🟣 Subpanel</option>
+                        <option value="" >All Types</option>
+                        <option value="outlet" >🔵 Outlet</option>
+                        <option value="lighting" >🟠 Lighting</option>
+                        <option value="heating" >🔴 Heating</option>
+                        <option value="appliance" >🟢 Appliance</option>
+                        <option value="subpanel" >🟣 Subpanel</option>
                     </select>
                 </div>
                 
                 <div class="filter-group flags-filter">
-                    <label data-i18n="circuitList.flags">Flags:</label>
+                    <label >Flags:</label>
                     <div class="flag-checkboxes">
                         <label class="checkbox-label">
                             <input type="checkbox" id="critical-filter" value="critical">
-                            <span data-i18n="circuitList.critical">🔋 Critical</span>
+                            <span >🔋 Critical</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" id="monitor-filter" value="monitor">
-                            <span data-i18n="circuitList.monitor">📈 Monitor</span>
+                            <span >📈 Monitor</span>
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" id="not-confirmed-filter" value="not-confirmed">
-                            <span data-i18n="circuitList.notConfirmed">❌ Not Confirmed</span>
+                            <span >❌ Not Confirmed</span>
                         </label>
                     </div>
                 </div>
                 
                 <div class="filter-group">
-                    <button id="clear-filters" type="button" data-i18n="circuitList.clearAll">Clear All</button>
+                    <button id="clear-filters" type="button" >Clear All</button>
                 </div>
             </div>
             <div class="circuit-table-wrapper">
                 <table id="circuit-table" class="circuit-table">
                     <thead>
                         <tr>
-                            <th class="sortable active asc" data-column="breaker"><span data-i18n="circuitList.headers.breaker">Breaker #</span> <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-column="amperage"><span data-i18n="circuitList.headers.amps">Amps</span> <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-column="room"><span data-i18n="circuitList.headers.room">Room</span> <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-column="type"><span data-i18n="circuitList.headers.type">Type</span> <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-column="notes"><span data-i18n="circuitList.headers.notes">Notes</span> <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-column="flags"><span data-i18n="circuitList.headers.flags">Flags</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable active asc" data-column="breaker"><span >Breaker #</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="amperage"><span >Amps</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="room"><span >Room</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="type"><span >Type</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="notes"><span >Notes</span> <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="flags"><span >Flags</span> <span class="sort-indicator"></span></th>
                         </tr>
                     </thead>
                     <tbody id="circuit-table-body">
@@ -187,21 +187,21 @@
         <div id="breaker-modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h2 data-i18n="breakers.editBreaker">Edit Breaker</h2>
+                <h2 >Edit Breaker</h2>
                 <div class="modal-top-actions">
-                    <button type="submit" form="breaker-form" data-i18n="app.save">Save</button>
-                    <button type="button" id="move-breaker" class="move-btn" data-i18n="breakers.moveBreaker">Move Breaker</button>
-                    <button type="button" id="delete-breaker" class="delete-btn" data-i18n="breakers.deleteBreaker">Delete Breaker</button>
+                    <button type="submit" form="breaker-form" >Save</button>
+                    <button type="button" id="move-breaker" class="move-btn" >Move Breaker</button>
+                    <button type="button" id="delete-breaker" class="delete-btn" >Delete Breaker</button>
                 </div>
                 <form id="breaker-form">
                     <div class="form-group">
-                        <label for="breaker-label" data-i18n="breakers.breakerLabel">Label:</label>
+                        <label for="breaker-label" >Label:</label>
                         <input type="text" id="breaker-label" name="label">
                     </div>
                     <div class="form-group">
-                        <label for="breaker-amperage" data-i18n="breakers.amperage">Amperage:</label>
+                        <label for="breaker-amperage" >Amperage:</label>
                         <select id="breaker-amperage" name="amperage">
-                            <option value="" data-i18n="breakers.none">None</option>
+                            <option value="" >None</option>
                             <option value="15">15A</option>
                             <option value="20">20A</option>
                             <option value="30">30A</option>
@@ -215,35 +215,35 @@
                     <div class="form-group">
                         <label>
                             <input type="checkbox" id="breaker-critical" name="critical">
-                            <span data-i18n="breakers.criticalCircuit">🔋 Critical Circuit</span>
+                            <span >🔋 Critical Circuit</span>
                         </label>
                     </div>
                     <div class="form-group">
                         <label>
                             <input type="checkbox" id="breaker-monitor" name="monitor">
-                            <span data-i18n="breakers.shouldMonitor">📈 Should Monitor</span>
+                            <span >📈 Should Monitor</span>
                         </label>
                     </div>
                     <div class="form-group">
                         <label>
                             <input type="checkbox" id="breaker-confirmed" name="confirmed">
-                            <span data-i18n="breakers.testedConfirmed">✅ Tested & Confirmed</span>
+                            <span >✅ Tested & Confirmed</span>
                         </label>
                     </div>
                     <div class="form-group">
-                        <label for="breaker-type" data-i18n="breakers.breakerType">Breaker Type:</label>
+                        <label for="breaker-type" >Breaker Type:</label>
                         <select id="breaker-type" name="breakerType">
-                            <option value="single" data-i18n="breakers.singleBreaker">Single Breaker</option>
-                            <option value="double_pole" data-i18n="breakers.doublePoleBreaker">Double Pole Breaker</option>
-                            <option value="tandem" data-i18n="breakers.tandemBreaker">Tandem Breaker (A+B in same slot)</option>
+                            <option value="single" >Single Breaker</option>
+                            <option value="double_pole" >Double Pole Breaker</option>
+                            <option value="tandem" >Tandem Breaker (A+B in same slot)</option>
                         </select>
                     </div>
                     
-                    <h3 data-i18n="circuits.title">Circuits</h3>
+                    <h3 >Circuits</h3>
                     <div id="circuits-container">
                         <!-- Circuits will be added here -->
                     </div>
-                    <button type="button" id="add-circuit" data-i18n="circuits.addCircuit">Add Circuit</button>
+                    <button type="button" id="add-circuit" >Add Circuit</button>
                     
                 </form>
             </div>
@@ -252,14 +252,14 @@
         <div id="move-breaker-modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h2 data-i18n="breakers.moveBreaker">Move Breaker</h2>
+                <h2 >Move Breaker</h2>
                 
 
                 <div class="destination-selection">
-                    <h3 data-i18n="breakers.selectDestination">Select Destination</h3>
+                    <h3 >Select Destination</h3>
                     
                     <div class="panel-selector-move">
-                        <label for="destination-panel" data-i18n="panels.destinationPanel">Destination Panel:</label>
+                        <label for="destination-panel" >Destination Panel:</label>
                         <select id="destination-panel">
                             <!-- Panels will be populated here -->
                         </select>
@@ -273,21 +273,20 @@
                 </div>
 
                 <div class="move-preview" style="display: none;">
-                    <h3 data-i18n="breakers.previewChanges">Preview Changes</h3>
+                    <h3 >Preview Changes</h3>
                     <div id="move-preview-content" class="preview-content">
                         <!-- Preview text will be generated here -->
                     </div>
                     
                     <div class="move-actions">
-                        <button type="button" id="confirm-move" class="confirm-btn" data-i18n="breakers.confirmMove">Confirm Move</button>
-                        <button type="button" id="cancel-move" class="cancel-btn" data-i18n="app.cancel">Cancel</button>
+                        <button type="button" id="confirm-move" class="confirm-btn" >Confirm Move</button>
+                        <button type="button" id="cancel-move" class="cancel-btn" >Cancel</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="i18n.js"></script>
     <script src="api-client.js"></script>
     <script src="panel-renderer.js"></script>
     <script src="circuit-list.js"></script>
