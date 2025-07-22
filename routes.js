@@ -179,6 +179,124 @@ router.delete('/breakers/:id', validateId(), asyncHandler(async (req, res) => {
     res.json({ message: 'Breaker deleted successfully' });
 }));
 
+// Move breaker endpoint
+router.post('/breakers/move', asyncHandler(async (req, res) => {
+    const {
+        sourceBreakerId,
+        destinationPanelId,
+        destinationPosition,
+        destinationSlot
+    } = req.body;
+
+    // Validate required fields
+    if (!sourceBreakerId || !destinationPanelId || !destinationPosition) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    try {
+        // Start transaction
+        await dbRun('BEGIN TRANSACTION');
+
+        // Get source breaker and its circuits
+        const sourceBreaker = await dbGet('SELECT * FROM breakers WHERE id = ?', [sourceBreakerId]);
+        if (!sourceBreaker) {
+            await dbRun('ROLLBACK');
+            return res.status(404).json({ error: 'Source breaker not found' });
+        }
+
+        const sourceCircuits = await dbAll(
+            'SELECT * FROM circuits WHERE breaker_id = ?', 
+            [sourceBreakerId]
+        );
+
+        // Check if destination position is occupied
+        let destinationBreaker = await dbGet(
+            'SELECT * FROM breakers WHERE panel_id = ? AND position = ? AND slot_position = ?', 
+            [destinationPanelId, destinationPosition, destinationSlot || 'single']
+        );
+
+        let destinationCircuits = [];
+        if (destinationBreaker) {
+            destinationCircuits = await dbAll(
+                'SELECT * FROM circuits WHERE breaker_id = ?', 
+                [destinationBreaker.id]
+            );
+        }
+
+        if (destinationBreaker) {
+            // Swap circuits between existing breakers
+            for (const circuit of sourceCircuits) {
+                await dbRun(
+                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                    [destinationBreaker.id, circuit.id]
+                );
+            }
+            
+            for (const circuit of destinationCircuits) {
+                await dbRun(
+                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                    [sourceBreakerId, circuit.id]
+                );
+            }
+        } else {
+            // Create new breaker at destination and move circuits there
+            const newBreaker = await dbRun(
+                `INSERT INTO breakers (panel_id, position, slot_position, label, amperage, critical, monitor, confirmed, breaker_type) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    destinationPanelId,
+                    destinationPosition,
+                    destinationSlot || 'single',
+                    '', // Empty label - will be auto-generated from circuits
+                    sourceBreaker.amperage,
+                    sourceBreaker.critical,
+                    sourceBreaker.monitor,
+                    sourceBreaker.confirmed,
+                    sourceBreaker.breaker_type
+                ]
+            );
+            
+            // Move circuits to new breaker
+            for (const circuit of sourceCircuits) {
+                await dbRun(
+                    'UPDATE circuits SET breaker_id = ? WHERE id = ?',
+                    [newBreaker.id, circuit.id]
+                );
+            }
+        }
+
+        // Check if source breaker still has circuits after the move
+        const remainingCircuits = await dbAll(
+            'SELECT * FROM circuits WHERE breaker_id = ?', 
+            [sourceBreakerId]
+        );
+
+        if (remainingCircuits.length === 0) {
+            // Delete empty source breaker
+            await dbRun('DELETE FROM breakers WHERE id = ?', [sourceBreakerId]);
+        }
+
+        // Commit transaction
+        await dbRun('COMMIT');
+
+        res.json({ 
+            message: 'Breaker moved successfully'
+        });
+
+    } catch (error) {
+        await dbRun('ROLLBACK');
+        console.error('Move breaker error:', error);
+        
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            res.status(409).json({ error: 'Destination position is already occupied' });
+        } else if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY' || error.code === 'SQLITE_CONSTRAINT') {
+            res.status(400).json({ error: 'Invalid panel or breaker reference' });
+        } else {
+            res.status(500).json({ error: 'Failed to move breaker' });
+        }
+    }
+}));
+
 // Room routes
 router.get('/rooms', asyncHandler(async (req, res) => {
     const rooms = await dbAll(`

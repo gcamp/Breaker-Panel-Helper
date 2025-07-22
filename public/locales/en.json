@@ -30,6 +30,7 @@
         "spaces": "Spaces",
         "mainPanel": "Main Panel",
         "subpanel": "Subpanel",
+        "destinationPanel": "Destination Panel:",
         "deletePanelConfirm": "Are you sure you want to delete \"{panelName}\"? This action cannot be undone.",
         "panelCreated": "Panel created successfully",
         "panelUpdated": "Panel updated successfully",
@@ -38,6 +39,8 @@
     
     "breakers": {
         "editBreaker": "Edit Breaker",
+        "moveBreaker": "Move Breaker",
+        "deleteBreaker": "Delete Breaker",
         "breakerLabel": "Label:",
         "amperage": "Amperage:",
         "criticalCircuit": "🔋 Critical Circuit",
@@ -52,9 +55,11 @@
         "slotA": "A (Left/Top)",
         "slotB": "B (Right/Bottom)",
         "none": "None",
+        "selectDestination": "Select Destination",
+        "previewChanges": "Preview Changes",
+        "confirmMove": "Confirm Move",
         "breakerSaved": "Breaker saved successfully",
         "breakerDeleted": "Breaker deleted successfully",
-        "deleteBreaker": "Delete Breaker",
         "cannotCreateDoublePole": "Cannot create double pole breaker - not enough space below",
         "breakerExists": "A breaker already exists at this position and slot"
     },

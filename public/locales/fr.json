@@ -29,7 +29,8 @@
         "panelSize": "Taille du Panneau :",
         "spaces": "Espaces",
         "mainPanel": "Panneau Principal",
-        "subpanel": "Sous-panneau",
+        "subpanel": "Sous-panneau", 
+        "destinationPanel": "Panneau de Destination :",
         "deletePanelConfirm": "Êtes-vous sûr de vouloir supprimer ce panneau ? Cela supprimera également tous les disjoncteurs et circuits.",
         "panelCreated": "Panneau créé avec succès",
         "panelUpdated": "Panneau mis à jour avec succès",
@@ -38,6 +39,8 @@
     
     "breakers": {
         "editBreaker": "Modifier le Disjoncteur",
+        "moveBreaker": "Déplacer le Disjoncteur",
+        "deleteBreaker": "Supprimer le Disjoncteur",
         "breakerLabel": "Étiquette :",
         "amperage": "Ampérage :",
         "criticalCircuit": "🔋 Circuit Critique",
@@ -52,9 +55,11 @@
         "slotA": "A (Gauche/Haut)",
         "slotB": "B (Droite/Bas)",
         "none": "Aucun",
+        "selectDestination": "Sélectionner la Destination",
+        "previewChanges": "Aperçu des Modifications",
+        "confirmMove": "Confirmer le Déplacement",
         "breakerSaved": "Disjoncteur enregistré avec succès",
         "breakerDeleted": "Disjoncteur supprimé avec succès",
-        "deleteBreaker": "Supprimer le Disjoncteur",
         "cannotCreateDoublePole": "Impossible de créer un disjoncteur bipolaire - pas assez d'espace en dessous",
         "breakerExists": "Un disjoncteur existe déjà à cette position et ce slot"
     },

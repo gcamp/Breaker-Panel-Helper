@@ -4,45 +4,48 @@
 class PanelRenderer {
     constructor(app) {
         this.app = app;
+        this.panelElementId = 'breaker-panel'; // Default to main panel
     }
 
     renderPanel() {
-        const panelElement = document.getElementById('breaker-panel');
+        const panelElement = document.getElementById(this.panelElementId);
         if (!panelElement || !this.app.currentPanel) return;
         
         panelElement.innerHTML = '';
         const size = this.app.currentPanel.size;
         
         for (let i = 1; i <= size; i++) {
-            const breakerContainer = this.createBreakerContainer(i);
+            const isDestination = this.panelElementId === 'destination-breaker-panel';
+            const breakerContainer = this.createBreakerContainer(i, isDestination);
             panelElement.appendChild(breakerContainer);
         }
         
         this.loadBreakers();
     }
 
-    createBreakerContainer(position) {
+    createBreakerContainer(position, isDestination = false) {
         const breakerContainer = document.createElement('div');
-        breakerContainer.className = 'breaker-container';
+        breakerContainer.className = isDestination ? 'breaker-container destination-container' : 'breaker-container';
         breakerContainer.dataset.position = position;
         
         const isLeft = position % 2 === 1;
+        const breakerClass = isDestination ? 'destination-breaker' : '';
         
         breakerContainer.innerHTML = `
             ${isLeft ? '<div class="breaker-amperage-box left"></div>' : ''}
             <div class="breaker-slot" data-position="${position}">
-                <div class="breaker single-breaker" data-position="${position}" data-slot="single">
+                <div class="breaker single-breaker ${breakerClass}" data-position="${position}" data-slot="single">
                     <div class="breaker-number">${position}</div>
                     <div class="breaker-label"></div>
                     <div class="breaker-indicators"></div>
                 </div>
                 <div class="tandem-breakers" style="display: none;">
-                    <div class="breaker tandem-a" data-position="${position}" data-slot="A">
+                    <div class="breaker tandem-a ${breakerClass}" data-position="${position}" data-slot="A">
                         <div class="breaker-number">${position}A</div>
                         <div class="breaker-label"></div>
                         <div class="breaker-indicators"></div>
                     </div>
-                    <div class="breaker tandem-b" data-position="${position}" data-slot="B">
+                    <div class="breaker tandem-b ${breakerClass}" data-position="${position}" data-slot="B">
                         <div class="breaker-number">${position}B</div>
                         <div class="breaker-label"></div>
                         <div class="breaker-indicators"></div>
@@ -56,7 +59,14 @@ class PanelRenderer {
         breakerContainer.querySelectorAll('.breaker').forEach(breaker => {
             breaker.addEventListener('click', () => {
                 const slot = breaker.dataset.slot;
-                this.openBreakerModal(position, slot);
+                if (isDestination) {
+                    // For destination breakers, trigger destination selection
+                    const position = parseInt(breaker.dataset.position);
+                    this.handleDestinationClick?.(position, slot);
+                } else {
+                    // For main panel breakers, open modal
+                    this.openBreakerModal(position, slot);
+                }
             });
         });
         
@@ -88,7 +98,14 @@ class PanelRenderer {
     }
 
     async updatePositionDisplay(position, breakers) {
-        const container = document.querySelector(`[data-position="${position}"]`).closest('.breaker-container');
+        // Search within the correct panel container
+        const panelContainer = document.getElementById(this.panelElementId);
+        if (!panelContainer) return;
+        
+        const element = panelContainer.querySelector(`[data-position="${position}"]`);
+        if (!element) return;
+        
+        const container = element.closest('.breaker-container');
         if (!container) return;
 
         // Reset container state
@@ -125,7 +142,10 @@ class PanelRenderer {
     async updateBreakerDisplay(breaker) {
         // This method is now mainly used for individual updates
         // Most loading is handled by updatePositionDisplay
-        const container = document.querySelector(`[data-position="${breaker.position}"]`).closest('.breaker-container');
+        const element = document.querySelector(`[data-position="${breaker.position}"]`);
+        if (!element) return;
+        
+        const container = element.closest('.breaker-container');
         if (!container) return;
 
         const isTandem = breaker.tandem || breaker.breaker_type === 'tandem';
@@ -198,14 +218,24 @@ class PanelRenderer {
         const container = breakerElement.closest('.breaker-container');
         const isDoublePole = breaker.double_pole || breaker.breaker_type === 'double_pole';
         
+        // Determine the panel container based on the renderer's target element
+        const panelContainer = container.closest(`#${this.panelElementId}`);
+        
         if (isDoublePole) {
             breakerElement.classList.add('double-pole');
             container.classList.add('double-pole-container');
             
-            // Hide the breaker below
-            const belowContainer = document.querySelector(`[data-position="${breaker.position + 2}"]`);
+            // Hide the breaker below - search within the correct panel
+            const targetPosition = breaker.position + 2;
+            
+            const belowElement = panelContainer ? 
+                panelContainer.querySelector(`[data-position="${targetPosition}"]`) : null;
+
+            
+            const belowContainer = belowElement?.closest('.breaker-container');
+            
             if (belowContainer) {
-                belowContainer.style.display = 'none';
+                belowContainer.style.setProperty('display', 'none', 'important');
             }
             
             // Update breaker number to show range
@@ -216,10 +246,14 @@ class PanelRenderer {
             breakerElement.classList.remove('double-pole');
             container.classList.remove('double-pole-container');
             
-            // Restore hidden breaker
-            const belowContainer = document.querySelector(`[data-position="${breaker.position + 2}"]`);
+            // Restore hidden breaker - search within the correct panel
+            const targetPosition = breaker.position + 2;
+            const belowElement = panelContainer ? 
+                panelContainer.querySelector(`[data-position="${targetPosition}"]`) : null;
+            const belowContainer = belowElement?.closest('.breaker-container');
+            
             if (belowContainer) {
-                belowContainer.style.display = '';
+                belowContainer.style.removeProperty('display');
             }
             
             // Reset breaker number
