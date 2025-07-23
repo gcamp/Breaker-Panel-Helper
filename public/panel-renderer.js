@@ -435,24 +435,28 @@ class PanelRenderer {
         const indicators = breakerElement.querySelector('.breaker-indicators');
         indicators.innerHTML = '';
         
+        if (!breaker) {
+            return;
+        }
+        
         if (breaker.critical) {
             const criticalIndicator = document.createElement('div');
             criticalIndicator.className = 'indicator critical';
-            criticalIndicator.title = window.i18n.t('breakers.criticalCircuit');
+            criticalIndicator.title = 'Critical Circuit';
             indicators.appendChild(criticalIndicator);
         }
         
         if (breaker.monitor) {
             const monitorIndicator = document.createElement('div');
             monitorIndicator.className = 'indicator monitor';
-            monitorIndicator.title = window.i18n.t('breakers.shouldMonitor');
+            monitorIndicator.title = 'Should Monitor';
             indicators.appendChild(monitorIndicator);
         }
         
         if (breaker.confirmed) {
             const confirmedIndicator = document.createElement('div');
             confirmedIndicator.className = 'indicator confirmed';
-            confirmedIndicator.title = window.i18n.t('breakers.testedConfirmed');
+            confirmedIndicator.title = 'Tested & Confirmed';
             indicators.appendChild(confirmedIndicator);
         }
     }
