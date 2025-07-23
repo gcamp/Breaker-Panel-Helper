@@ -470,6 +470,10 @@ class PanelRenderer {
         const indicators = breakerElement.querySelector('.breaker-indicators');
         indicators.innerHTML = '';
         
+        if (!breaker) {
+            return;
+        }
+        
         if (breaker.critical) {
             const criticalIndicator = document.createElement('div');
             criticalIndicator.className = 'indicator critical';
