@@ -54,7 +54,7 @@ class CircuitListManager {
             .filter(room => room && room.trim() !== '')
         )].sort();
         
-        roomFilter.innerHTML = `<option value="">${window.i18n.t('circuitList.allRooms')}</option>`;
+        roomFilter.innerHTML = `<option value="">All Rooms</option>`;
         
         rooms.forEach(room => {
             const option = document.createElement('option');
@@ -167,8 +167,8 @@ class CircuitListManager {
 
     showNoCircuitsMessage(tableBody) {
         const message = this.app.allCircuitData.length === 0 
-            ? window.i18n.t('circuitList.noCircuits')
-            : window.i18n.t('circuitList.noMatchingCircuits');
+            ? 'No circuits found in this panel.'
+            : 'No circuits match the current filters.';
         
         tableBody.innerHTML = `
             <tr>
@@ -185,7 +185,7 @@ class CircuitListManager {
         row.dataset.breakerId = breaker.id;
         row.dataset.circuitId = circuit.id;
         row.dataset.breakerPosition = breaker.position;
-        row.title = window.i18n.t('circuitList.clickToEdit');
+        row.title = 'Click to edit circuit details';
         
         // Breaker number with double pole and tandem indicators
         var breakerNumberHtml;
@@ -207,18 +207,18 @@ class CircuitListManager {
         
         // Flags
         const flags = [];
-        if (breaker.critical) flags.push(`<span class="flag-badge flag-critical">${window.i18n.t('circuitList.flagCritical')}</span>`);
-        if (breaker.monitor) flags.push(`<span class="flag-badge flag-monitor">${window.i18n.t('circuitList.flagMonitor')}</span>`);
-        if (breaker.confirmed) flags.push(`<span class="flag-badge flag-confirmed">${window.i18n.t('circuitList.flagConfirmed')}</span>`);
+        if (breaker.critical) flags.push(`<span class="flag-badge flag-critical">Critical</span>`);
+        if (breaker.monitor) flags.push(`<span class="flag-badge flag-monitor">Monitor</span>`);
+        if (breaker.confirmed) flags.push(`<span class="flag-badge flag-confirmed">Confirmed</span>`);
         const flagsHtml = flags.length > 0 ? `<div class="flags-cell">${flags.join('')}</div>` : '';
         
         row.innerHTML = `
-            <td class="breaker-number-cell" data-label="${window.i18n.t('circuitList.headers.breaker')}">${breakerNumberHtml}</td>
-            <td class="amperage-cell" data-label="${window.i18n.t('circuitList.headers.amps')}">${breaker.amperage ? breaker.amperage + 'A' : '-'}</td>
-            <td data-label="${window.i18n.t('circuitList.headers.room')}">${circuit.room || '-'}</td>
-            <td data-label="${window.i18n.t('circuitList.headers.type')}">${circuitTypeHtml}</td>
-            <td data-label="${window.i18n.t('circuitList.headers.notes')}">${circuit.notes || '-'}</td>
-            <td data-label="${window.i18n.t('circuitList.headers.flags')}">${flagsHtml}</td>
+            <td class="breaker-number-cell" data-label="Breaker #">${breakerNumberHtml}</td>
+            <td class="amperage-cell" data-label="Amps">${breaker.amperage ? breaker.amperage + 'A' : '-'}</td>
+            <td data-label="Room">${circuit.room || '-'}</td>
+            <td data-label="Type">${circuitTypeHtml}</td>
+            <td data-label="Notes">${circuit.notes || '-'}</td>
+            <td data-label="Flags">${flagsHtml}</td>
         `;
         
         return row;

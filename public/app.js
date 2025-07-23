@@ -268,7 +268,7 @@ class BreakerPanelApp {
     }
 
     async createDefaultPanel() {
-        const panelData = { name: window.i18n.t('panels.mainPanel'), size: 40 };
+        const panelData = { name: 'Main Panel', size: 40 };
         
         try {
             this.currentPanel = await this.api.createPanel(panelData);
@@ -339,11 +339,11 @@ class BreakerPanelApp {
 
     async deleteCurrentPanel() {
         if (this.allPanels.length <= 1) {
-            alert(window.i18n.t('errors.cannotDeleteLastPanel'));
+            alert('Cannot delete the last panel. At least one panel must exist.');
             return;
         }
 
-        const confirmDelete = confirm(window.i18n.t('panels.deletePanelConfirm', { panelName: this.currentPanel.name }));
+        const confirmDelete = confirm(`Are you sure you want to delete "${this.currentPanel.name}"? This action cannot be undone.`);
         if (!confirmDelete) return;
 
         try {
@@ -557,7 +557,7 @@ class BreakerPanelApp {
 
     printPanel() {
         if (!this.currentPanel) {
-            alert(window.i18n.t('print.noPanelSelected'));
+            alert('No panel selected. Please select a panel to print.');
             return;
         }
 
@@ -580,7 +580,7 @@ class BreakerPanelApp {
         const panelContainer = document.querySelector('.panel-container');
         
         if (!panelElement || !panelContainer) {
-            return `<html><body><p>${window.i18n.t('print.panelNotAvailable')}</p></body></html>`;
+            return `<html><body><p>Panel not available for printing.</p></body></html>`;
         }
 
         // Clone the panel element to avoid modifying the original
@@ -594,16 +594,16 @@ class BreakerPanelApp {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>${window.i18n.t('print.title', { panelName: this.currentPanel.name })}</title>
+            <title>Electrical Panel - ${this.currentPanel.name}</title>
             <style>
                 ${this.getPrintStyles()}
             </style>
         </head>
         <body>
             <div class="print-header">
-                <h1>${window.i18n.t('print.title', { panelName: this.currentPanel.name })}</h1>
+                <h1>Electrical Panel - ${this.currentPanel.name}</h1>
                 <div class="print-info">
-                    <span>${window.i18n.t('print.printed')} ${currentDate}</span>
+                    <span>Printed: ${currentDate}</span>
                 </div>
             </div>
             
@@ -910,7 +910,7 @@ class BreakerPanelApp {
         const room = this.allRooms.find(r => r.id === roomId);
         if (!room) return;
 
-        const confirmDelete = confirm(window.i18n.t('rooms.deleteRoomConfirm', { roomName: room.name }));
+        const confirmDelete = confirm(`Are you sure you want to delete room "${room.name}"? This action cannot be undone.`);
         if (!confirmDelete) return;
 
         try {
@@ -927,7 +927,7 @@ class BreakerPanelApp {
         if (!container) return;
 
         if (this.allRooms.length === 0) {
-            container.innerHTML = `<p class="no-rooms">${window.i18n.t('rooms.noRooms')}</p>`;
+            container.innerHTML = `<p class="no-rooms">No rooms created yet. Add a room to get started.</p>`;
             return;
         }
 
@@ -945,10 +945,10 @@ class BreakerPanelApp {
             outside: '⚫'
         };
         const levelNames = {
-            basement: window.i18n.t('rooms.basement'),
-            main: window.i18n.t('rooms.mainLevel'),
-            upper: window.i18n.t('rooms.upperLevel'),
-            outside: window.i18n.t('rooms.outside')
+            basement: 'Basement',
+            main: 'Main Level',
+            upper: 'Upper Level',
+            outside: 'Outside'
         };
 
         let html = '';
@@ -964,7 +964,7 @@ class BreakerPanelApp {
                         data-level="${level}" 
                         draggable="true">
                         <span class="room-name">${room.name}</span>
-                        <button class="delete-room-btn" onclick="app.deleteRoom(${room.id})">${window.i18n.t('app.delete')}</button>
+                        <button class="delete-room-btn" onclick="app.deleteRoom(${room.id})">Delete</button>
                     </div>`;
                 });
             }
