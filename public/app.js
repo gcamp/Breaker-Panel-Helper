@@ -9,13 +9,6 @@
  * Main Application Class
  */
 class BreakerPanelApp {
-    static levelColors = {
-        basement: '🔵',
-        main: '🟢', 
-        upper: '🟠',
-        outside: '⚫'
-    };
-
     constructor() {
         this.api = new ApiClient();
         this.currentPanel = null;
@@ -1039,6 +1032,14 @@ class BreakerPanelApp {
         }
     }
 }
+
+// Define level colors as static property for reuse across components
+BreakerPanelApp.levelColors = {
+    basement: '🔵',
+    main: '🟢', 
+    upper: '🟠',
+    outside: '⚫'
+};
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
