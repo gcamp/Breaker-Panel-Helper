@@ -10,14 +10,9 @@ class CircuitListManager {
         if (!this.app.currentPanel) return;
         
         try {
-            const [breakers, allCircuits] = await Promise.all([
-                this.app.api.getBreakersByPanel(this.app.currentPanel.id),
-                this.app.api.getAllCircuits()
-            ]);
-            
-            // Filter circuits for current panel's breakers
-            const breakerIds = breakers.map(b => b.id);
-            const panelCircuits = allCircuits.filter(c => breakerIds.includes(c.breaker_id));
+            // Use comprehensive endpoint to get all data in one request
+            const panelData = await this.app.api.getPanelComplete(this.app.currentPanel.id);
+            const { breakers, circuits: panelCircuits } = panelData;
             
             // Store circuit data for filtering
             this.app.allCircuitData = panelCircuits.map(circuit => {
