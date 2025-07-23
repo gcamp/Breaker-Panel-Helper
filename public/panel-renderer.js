@@ -755,7 +755,7 @@ class PanelRenderer {
             
             // Get all breakers at this position from cache for display update
             const positionBreakers = [];
-            for (const [key, breaker] of this.breakerCache.entries()) {
+            for (const breaker of this.breakerCache.values()) {
                 if (breaker.position === this.app.currentBreaker.position) {
                     positionBreakers.push(breaker);
                 }
