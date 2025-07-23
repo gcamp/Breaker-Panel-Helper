@@ -43,6 +43,35 @@ router.put('/panels/:id', validateId(), validatePanelData, CrudHelpers.createUpd
 
 router.delete('/panels/:id', validateId(), CrudHelpers.createDeleteHandler('panels', 'Panel'));
 
+// Get panel with all breakers and circuits in one request
+router.get('/panels/:panelId/complete', validateId('panelId'), ErrorHandler.asyncHandler(async (req, res) => {
+    const panelId = req.params.panelId;
+    
+    // Get panel info
+    const panel = await databaseService.get('SELECT * FROM panels WHERE id = ?', [panelId]);
+    if (!panel) {
+        return res.status(404).json({ error: 'Panel not found' });
+    }
+    
+    // Get all breakers for this panel
+    const breakers = await databaseService.all('SELECT * FROM breakers WHERE panel_id = ? ORDER BY position', [panelId]);
+    
+    // Get all circuits for breakers in this panel
+    const circuits = await databaseService.all(`
+        SELECT c.*, b.position, b.slot_position 
+        FROM circuits c 
+        JOIN breakers b ON c.breaker_id = b.id 
+        WHERE b.panel_id = ? 
+        ORDER BY b.position, c.id
+    `, [panelId]);
+    
+    res.json({
+        panel,
+        breakers,
+        circuits
+    });
+}));
+
 // Breaker routes
 router.get('/panels/:panelId/breakers', validateId('panelId'), ErrorHandler.asyncHandler(async (req, res) => {
     const breakers = await databaseService.all('SELECT * FROM breakers WHERE panel_id = ? ORDER BY position', [req.params.panelId]);

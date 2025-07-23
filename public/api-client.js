@@ -112,6 +112,13 @@ class ApiClient {
         return this.request(`/panels/${panelId}/breakers`);
     }
 
+    async getPanelComplete(panelId) {
+        if (!this.isValidId(panelId)) {
+            throw new Error('Invalid panel ID');
+        }
+        return this.request(`/panels/${panelId}/complete`);
+    }
+
     async getBreaker(id) {
         if (!this.isValidId(id)) {
             throw new Error('Invalid breaker ID');
