@@ -1192,6 +1192,15 @@ h1 {
     text-align: left;
     min-width: 60px;
 }
+.breaker-number-cell .breaker-label {
+    display: inline;
+    white-space: nowrap;
+    margin-top: 0;
+    font-size: inherit;
+    line-height: inherit;
+    -webkit-line-clamp: none;
+    -webkit-box-orient: initial;
+}
 
 .double-pole-indicator {
     background-color: #fd79a8;

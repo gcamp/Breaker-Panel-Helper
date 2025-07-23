@@ -9,6 +9,13 @@
  * Main Application Class
  */
 class BreakerPanelApp {
+    static levelColors = {
+        basement: '🔵',
+        main: '🟢', 
+        upper: '🟠',
+        outside: '⚫'
+    };
+
     constructor() {
         this.api = new ApiClient();
         this.currentPanel = null;
@@ -938,12 +945,6 @@ class BreakerPanelApp {
         }, {});
 
         const levelOrder = ['upper', 'main', 'basement', 'outside'];
-        const levelColors = {
-            basement: '🔵',
-            main: '🟢', 
-            upper: '🟠',
-            outside: '⚫'
-        };
         const levelNames = {
             basement: 'Basement',
             main: 'Main Level',
@@ -954,7 +955,7 @@ class BreakerPanelApp {
         let html = '';
         levelOrder.forEach(level => {
             html += `<div class="room-level-group" data-level="${level}">
-                <h4>${levelColors[level]} ${levelNames[level]}</h4>
+                <h4>${BreakerPanelApp.levelColors[level]} ${levelNames[level]}</h4>
                 <div class="room-items drop-zone">`;
             
             if (roomsByLevel[level]) {

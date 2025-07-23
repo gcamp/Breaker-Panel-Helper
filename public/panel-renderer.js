@@ -698,16 +698,9 @@ class PanelRenderer {
     }
 
     generateRoomOptions(selectedId = null) {
-        const levelColors = {
-            basement: '🔵',
-            main: '🟢', 
-            upper: '🟠',
-            outside: '⚫'
-        };
-
         return this.app.allRooms
             .map(room => 
-                `<option value="${room.id}" ${selectedId == room.id ? 'selected' : ''}>${levelColors[room.level]} ${room.name}</option>`
+                `<option value="${room.id}" ${selectedId == room.id ? 'selected' : ''}>${BreakerPanelApp.levelColors[room.level]} ${room.name}</option>`
             )
             .join('');
     }
