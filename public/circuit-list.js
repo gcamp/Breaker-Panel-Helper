@@ -192,7 +192,8 @@ class CircuitListManager {
         if (breaker.breaker_type === 'double_pole') {
             breakerNumberHtml = `${breaker.position}-${breaker.position + 2}<span class="double-pole-indicator">2P</span>`;
         } else if (breaker.breaker_type === 'tandem') {
-            breakerNumberHtml = `${breaker.position}${breaker.slot_position}<span class="tandem-indicator">T</span>`;
+            const slotLetter = breaker.slot_position === 'A' ? 'A' : 'B';
+            breakerNumberHtml = `${breaker.position}${slotLetter}<span class="tandem-indicator">T</span>`;
         } else {
             breakerNumberHtml = breaker.position;
         }

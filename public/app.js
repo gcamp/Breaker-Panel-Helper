@@ -1041,7 +1041,16 @@ BreakerPanelApp.levelColors = {
     outside: '⚫'
 };
 
-// Initialize the application when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new BreakerPanelApp();
-});
+// Export for Node.js environment (tests)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = BreakerPanelApp;
+} else if (typeof global !== 'undefined') {
+    global.BreakerPanelApp = BreakerPanelApp;
+}
+
+// Initialize the application when DOM is ready (skip in test environment)
+if (typeof module === 'undefined' || !module.exports) {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.app = new BreakerPanelApp();
+    });
+}
