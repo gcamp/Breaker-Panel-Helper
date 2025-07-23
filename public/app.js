@@ -18,6 +18,7 @@ class BreakerPanelApp {
         this.circuitCounter = 0;
         this.existingCircuits = [];
         this.allCircuitData = [];
+        this.globalCircuitCache = new Map(); // Cache all circuits globally
         this.currentSort = { column: 'breaker', direction: 'asc' };
         
         // Initialize modules
@@ -154,14 +155,32 @@ class BreakerPanelApp {
     }
 
     async loadAllPanels() {
-        const [panels, circuits] = await Promise.all([
-            this.api.getAllPanels(),
-            this.api.getAllCircuits()
-        ]);
+        const panels = await this.api.getAllPanels();
+        
+        // Load complete data for all panels to populate global cache
+        const panelDataPromises = panels.map(panel => 
+            this.api.getPanelComplete(panel.id).catch(error => {
+                console.warn(`Failed to load data for panel ${panel.id}:`, error);
+                return { panel, breakers: [], circuits: [] };
+            })
+        );
+        
+        const allPanelData = await Promise.all(panelDataPromises);
+        
+        // Build global circuit cache and extract all circuits
+        this.globalCircuitCache.clear();
+        const allCircuits = [];
+        
+        allPanelData.forEach(({ circuits }) => {
+            circuits.forEach(circuit => {
+                this.globalCircuitCache.set(circuit.id, circuit);
+                allCircuits.push(circuit);
+            });
+        });
         
         // Identify subpanels
         const subpanelIds = new Set(
-            circuits
+            allCircuits
                 .filter(circuit => circuit.type === 'subpanel' && circuit.subpanel_id)
                 .map(circuit => circuit.subpanel_id)
         );
@@ -177,6 +196,20 @@ class BreakerPanelApp {
         });
         
         await this.populatePanelSelector();
+    }
+
+    // Helper methods to maintain circuit cache
+    updateCircuitCache(circuit) {
+        this.globalCircuitCache.set(circuit.id, circuit);
+    }
+
+    removeCircuitFromCache(circuitId) {
+        this.globalCircuitCache.delete(circuitId);
+    }
+
+    getCircuitsByBreaker(breakerId) {
+        return Array.from(this.globalCircuitCache.values())
+            .filter(c => c.breaker_id === breakerId);
     }
 
     async createPanelOptions(panels, circuits) {
@@ -203,7 +236,8 @@ class BreakerPanelApp {
         
         selector.innerHTML = '';
         
-        const circuits = await this.api.getAllCircuits();
+        // Use cached circuits instead of making API call
+        const circuits = Array.from(this.globalCircuitCache.values());
         const panelOptions = await this.createPanelOptions(this.allPanels, circuits);
         
         panelOptions.forEach(({ value, text }) => {

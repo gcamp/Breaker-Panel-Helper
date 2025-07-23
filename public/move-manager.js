@@ -75,10 +75,9 @@ class MoveManager {
 
     async loadPanelOptions() {
         try {
-            const [panels, circuits] = await Promise.all([
-                this.app.api.getAllPanels(),
-                this.app.api.getAllCircuits()
-            ]);
+            // Use cached data instead of making API calls
+            const panels = this.app.allPanels;
+            const circuits = Array.from(this.app.globalCircuitCache.values());
             const destinationSelect = document.getElementById('destination-panel');
             
             destinationSelect.innerHTML = '<option value="">Select destination panel...</option>';
@@ -166,8 +165,9 @@ class MoveManager {
                 (b.slot_position || 'single') === this.destinationSlot
             );
 
-            // Get source circuits
-            const sourceCircuits = await this.app.api.getCircuitsByBreaker(this.sourceBreaker.id);
+            // Get source circuits from cache
+            const sourceCircuits = Array.from(this.app.globalCircuitCache.values())
+                .filter(c => c.breaker_id === this.sourceBreaker.id);
             const relevantSourceCircuits = sourceCircuits.filter(c => 
                 (c.slot_position || 'single') === this.sourceSlot
             );
@@ -175,7 +175,8 @@ class MoveManager {
             // Get destination circuits if breaker exists
             let destinationCircuits = [];
             if (destinationBreaker) {
-                const allDestinationCircuits = await this.app.api.getCircuitsByBreaker(destinationBreaker.id);
+                const allDestinationCircuits = Array.from(this.app.globalCircuitCache.values())
+                    .filter(c => c.breaker_id === destinationBreaker.id);
                 destinationCircuits = allDestinationCircuits.filter(c => 
                     (c.slot_position || 'single') === this.destinationSlot
                 );

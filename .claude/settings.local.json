@@ -38,7 +38,10 @@
       "Bash(docker exec:*)",
       "Bash(docker stop:*)",
       "Bash(docker rm:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(git checkout:*)",
+      "Bash(sed:*)",
+      "Bash(git pull:*)"
     ],
     "deny": []
   }

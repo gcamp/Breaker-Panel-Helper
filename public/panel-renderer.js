@@ -5,6 +5,8 @@ class PanelRenderer {
     constructor(app) {
         this.app = app;
         this.panelElementId = 'breaker-panel'; // Default to main panel
+        this.breakerCache = new Map(); // Cache breakers by position for quick lookup
+        this.circuitCache = new Map(); // Cache circuits by breaker_id
     }
 
     renderPanel() {
@@ -77,7 +79,27 @@ class PanelRenderer {
         if (!this.app.currentPanel) return;
         
         try {
-            const breakers = await this.app.api.getBreakersByPanel(this.app.currentPanel.id);
+            // Use the comprehensive endpoint to get all data in one request
+            const panelData = await this.app.api.getPanelComplete(this.app.currentPanel.id);
+            const { breakers, circuits } = panelData;
+            
+            // Clear and populate caches
+            this.breakerCache.clear();
+            this.circuitCache.clear();
+            
+            // Cache breakers by position (handling tandems)
+            breakers.forEach(breaker => {
+                const key = `${breaker.position}-${breaker.slot_position || 'single'}`;
+                this.breakerCache.set(key, breaker);
+            });
+            
+            // Cache circuits by breaker_id
+            circuits.forEach(circuit => {
+                if (!this.circuitCache.has(circuit.breaker_id)) {
+                    this.circuitCache.set(circuit.breaker_id, []);
+                }
+                this.circuitCache.get(circuit.breaker_id).push(circuit);
+            });
             
             // Group breakers by position to handle tandems properly
             const breakersByPosition = {};
@@ -95,6 +117,18 @@ class PanelRenderer {
         } catch (error) {
             this.app.handleError('Failed to load breakers', error);
         }
+    }
+
+    // Update cache after breaker modifications
+    updateBreakerCache(breaker) {
+        const key = `${breaker.position}-${breaker.slot_position || 'single'}`;
+        this.breakerCache.set(key, breaker);
+    }
+
+    // Remove from cache after breaker deletion
+    removeBreakerFromCache(position, slot = 'single') {
+        const key = `${position}-${slot}`;
+        this.breakerCache.delete(key);
     }
 
     async updatePositionDisplay(position, breakers) {
@@ -266,7 +300,8 @@ class PanelRenderer {
         let displayLabel = breaker.label || '';
         
         try {
-            const circuits = await this.app.api.getCircuitsByBreaker(breaker.id);
+            // Use cached circuit data instead of making API call
+            const circuits = this.circuitCache.get(breaker.id) || [];
             
             // If no manual label is set, auto-generate one from circuits
             if (!displayLabel && circuits.length > 0) {
@@ -463,13 +498,9 @@ class PanelRenderer {
 
     async openBreakerModal(position, slot = 'single') {
         try {
-            // For existing tandem breakers, get the specific slot
-            const queryParams = slot !== 'single' ? `?slot_position=${slot}` : '';
-            this.app.currentBreaker = await this.app.api.getBreakerByPosition(
-                this.app.currentPanel.id, 
-                position,
-                queryParams
-            );
+            // Use cached breaker data instead of making API call
+            const cacheKey = `${position}-${slot}`;
+            this.app.currentBreaker = this.breakerCache.get(cacheKey);
             
             if (!this.app.currentBreaker) {
                 this.app.currentBreaker = {
@@ -549,9 +580,8 @@ class PanelRenderer {
         
         if (this.app.currentBreaker.id) {
             try {
-                this.app.existingCircuits = await this.app.api.getCircuitsByBreaker(
-                    this.app.currentBreaker.id
-                );
+                // Use cached circuit data instead of making API call
+                this.app.existingCircuits = this.circuitCache.get(this.app.currentBreaker.id) || [];
                 this.app.existingCircuits.forEach(circuit => {
                     this.addCircuitForm(circuit);
                 });
@@ -725,11 +755,18 @@ class PanelRenderer {
 
             Object.assign(this.app.currentBreaker, breakerData);
             
+            // Update cache with the modified breaker
+            this.updateBreakerCache(this.app.currentBreaker);
+            
             await this.saveCircuits();
             
-            // Reload all breakers at this position to handle tandem properly
-            const allBreakers = await this.app.api.getBreakersByPanel(this.app.currentPanel.id);
-            const positionBreakers = allBreakers.filter(b => b.position === this.app.currentBreaker.position);
+            // Get all breakers at this position from cache for display update
+            const positionBreakers = [];
+            for (const [key, breaker] of this.breakerCache.entries()) {
+                if (breaker.position === this.app.currentBreaker.position) {
+                    positionBreakers.push(breaker);
+                }
+            }
             await this.updatePositionDisplay(this.app.currentBreaker.position, positionBreakers);
             
             this.closeModal();
